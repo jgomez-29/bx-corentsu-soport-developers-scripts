@@ -27,7 +27,7 @@ Dentro de cada una:
 |-------------------|--------|
 | `config.py` | Config general: ambiente, TARGET, entidad, límites, etc. |
 | `dev/config.py` y `qa/config.py` | Config por ambiente. Nombres de cola/topic (no sensibles). URL/ARN se construyen con región y cuenta. |
-| `send_to_sqs.py` | Script principal: carga config, resuelve raíz del repo, importa `common/`, envía mensajes. |
+| `send_message.py` | Script principal: carga config, resuelve raíz del repo, importa `common/`, envía mensajes. Según `TARGET` en config envía a SQS, SNS o ambos. |
 | `*_builder.py` | Construye payloads y envelopes según el caso de uso. |
 | `dev/entities/`, `qa/entities/` | JSON de entrada por ambiente. |
 | `dev/logs/`, `qa/logs/` | Logs de ejecución por ambiente. |
@@ -55,7 +55,7 @@ AWS_ACCOUNT_ID=123456789012
 3. Ir a la carpeta del caso de uso y ejecutar:
 
    ```bash
-   python send_to_sqs.py
+   python send_message.py
    ```
 
 Cada caso de uso tiene su propio `README.md` con más detalle (entidades, modos, etc.).

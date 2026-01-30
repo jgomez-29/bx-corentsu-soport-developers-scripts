@@ -7,7 +7,7 @@ Script para enviar mensajes a la queue `queue-finmg-sales-transmission` para pro
 ```
 CreateSaleTransmission/
 ├── sale_transmission_builder.py    # Lógica común para cargar/generar SaleTransmission
-├── send_to_sqs.py                   # Script principal (común)
+├── send_message.py                   # Script principal (común)
 ├── README.md                        # Esta documentación
 │
 ├── dev/                             # Ambiente DEV
@@ -59,7 +59,7 @@ MAX_MESSAGES = 1000  # Cantidad de mensajes a generar
 Desde dentro del folder del ambiente (dev/ o qa/):
 
 ```bash
-python ../send_to_sqs.py
+python ../send_message.py
 ```
 
 ## 📋 Campos Mínimos Requeridos
@@ -178,7 +178,7 @@ Los nombres de la cola y del topic están en `dev/config.py` y `qa/config.py` (`
    ]
    ```
 
-3. Ejecuta: `python ../send_to_sqs.py`
+3. Ejecuta: `python ../send_message.py`
 
 ### Modo 2: Pruebas de Estrés
 
@@ -199,7 +199,7 @@ Genera múltiples mensajes automáticamente para pruebas de carga:
    - ...
    - TEST-SII-001000
 
-3. Ejecuta: `python ../send_to_sqs.py`
+3. Ejecuta: `python ../send_message.py`
 
 ## 📝 Logs
 
@@ -253,7 +253,7 @@ cd dev/
 # MAX_MESSAGES = 5000
 
 # 3. Ejecutar
-python ../send_to_sqs.py
+python ../send_message.py
 ```
 
 Esto generará 5000 mensajes con `siiFolio` incrementales` para probar el rendimiento del `CreateSaleTransmissionUseCase`.

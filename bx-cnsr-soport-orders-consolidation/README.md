@@ -63,7 +63,7 @@ MODIFY_ORDER_TYPE = 3
    ```
 3. Ejecuta el script:
    ```bash
-   python send_to_sqs.py
+   python send_message.py
    ```
 
 El script generará orderIds como:
@@ -92,7 +92,7 @@ El script generará orderIds como:
    ```
 3. Ejecuta el script:
    ```bash
-   python send_to_sqs.py
+   python send_message.py
    ```
 
 ## Log de OrderIds

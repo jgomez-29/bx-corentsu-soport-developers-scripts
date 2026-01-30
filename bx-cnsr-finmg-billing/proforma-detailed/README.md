@@ -69,7 +69,7 @@ ACCOUNT = None  # None para omitir, o un string como "ACC001"
    ```
 3. Ejecuta el script:
    ```bash
-   python send_to_sqs.py
+   python send_message.py
    ```
 
 ### Opción 2: Usar lista directa
@@ -82,7 +82,7 @@ ACCOUNT = None  # None para omitir, o un string como "ACC001"
    ```
 2. Ejecuta el script:
    ```bash
-   python send_to_sqs.py
+   python send_message.py
    ```
 
 **⚠️ IMPORTANTE:** 

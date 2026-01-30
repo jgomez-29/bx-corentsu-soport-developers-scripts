@@ -32,7 +32,7 @@ Al **añadir** un nuevo script/caso de uso, crear exactamente:
 ```
 <nombre-caso>/
   config.py                       # Config GENERAL: ENVIRONMENT, TARGET, ENTITY_TYPE, EVENT_TYPE, MAX_MESSAGES, BATCH_SIZE, INPUT_FILE, LOGS_DIR, etc.
-  send_to_sqs.py                  # Script principal (patrón en proforma-detailed o create-sale-transmission)
+  send_message.py                  # Script principal (nombre convencional; según TARGET envía a SQS, SNS o ambos)
   <entidad>_builder.py             # Carga entidades y construye envelopes (compatible con MessageBuilder)
   dev/
     config.py                     # REGION, AWS_ACCOUNT_ID desde os.getenv; QUEUE_NAME, TOPIC_NAME literales; construir QUEUE_URL y TOPIC_ARN
@@ -54,7 +54,9 @@ Al **añadir** un nuevo script/caso de uso, crear exactamente:
   - `QUEUE_URL` y `TOPIC_ARN` construidos con `f"https://sqs.{REGION}.amazonaws.com/{AWS_ACCOUNT_ID}/{QUEUE_NAME}"` y análogo para SNS.
 - **En `config.py` (raíz del caso de uso):** `ENVIRONMENT`, `TARGET`, `ENTITY_TYPE`, `EVENT_TYPE`, `MAX_MESSAGES` (o `TOTAL_MESSAGES` si aplica), `BATCH_SIZE`, `INPUT_FILE`, `LOGS_DIR`, etc.
 
-## 7. Reglas del script `send_to_sqs.py`
+## 7. Reglas del script principal (`send_message.py`)
+
+El archivo se llama `send_message.py` por convención histórica; en realidad puede enviar a SQS, SNS o ambos según `TARGET` en config. Es el **único punto de entrada** por caso de uso.
 
 1. Resolver **raíz del repo** subiendo desde `Path(__file__).parent` hasta el directorio que contiene `common/`. Añadir esa ruta a `sys.path` antes de importar `common`.
 2. Cargar **`.env`** desde `repo_root / ".env"`: usar `load_dotenv(str(_env_file))` y, si las variables siguen vacías, cargar el archivo manualmente (líneas `KEY=VALUE` no comentadas).
@@ -83,12 +85,12 @@ Al **añadir** un nuevo script/caso de uso, crear exactamente:
 
 ## 11. Ejecución
 
-- Los scripts se pueden ejecutar desde la **raíz del repo** (`python ./ruta/caso/send_to_sqs.py`) o desde la **carpeta del caso de uso** (`python send_to_sqs.py`). La resolución de la raíz del repo es por `Path(__file__).parent`, no por el directorio de trabajo.
+- Los scripts se pueden ejecutar desde la **raíz del repo** (`python ./ruta/caso/send_message.py`) o desde la **carpeta del caso de uso** (`python send_message.py`). La resolución de la raíz del repo es por `Path(__file__).parent`, no por el directorio de trabajo.
 - Si la terminal **no** es interactiva (`sys.stdin.isatty()` es False), no hacer prompts; usar siempre los valores del `config.py` (útil en CI o pipelines).
 
 ## 12. Resumen para “añadir algo nuevo”
 
 1. Crear la carpeta del caso de uso con la estructura de la sección 5.
-2. Copiar el flujo de un script existente (ej. `bx-cnsr-finmg-billing/proforma-detailed/send_to_sqs.py` o `create-sale-transmission/send_to_sqs.py`) y adaptar entidad, builder y rutas.
+2. Copiar el flujo de un script existente (ej. `bx-cnsr-finmg-billing/proforma-detailed/send_message.py` o `create-sale-transmission/send_message.py`) y adaptar entidad, builder y rutas.
 3. No duplicar lógica de `common/`; usar solo `.env` para datos sensibles; nombres de cola/topic en config como literales.
 4. Añadir `README.md` del caso de uso y, si toca, actualizar el README raíz.

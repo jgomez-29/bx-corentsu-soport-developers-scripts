@@ -153,32 +153,27 @@ if TARGET in ("sns", "both") and not CONFIG_TOPIC_ARN:
 
 # Ajustar rutas relativas al ambiente si es necesario
 if INPUT_FILE and not Path(INPUT_FILE).is_absolute():
-    # Si INPUT_FILE es relativo, buscar en el folder del ambiente
     env_input_file = script_dir / ENVIRONMENT / INPUT_FILE
     if env_input_file.exists():
         INPUT_FILE = str(env_input_file)
     else:
-        # Si no existe en el ambiente, buscar en la raíz
         root_input_file = script_dir / INPUT_FILE
         if root_input_file.exists():
             INPUT_FILE = str(root_input_file)
 
 if STRESS_TEST_TEMPLATE_FILE and not Path(STRESS_TEST_TEMPLATE_FILE).is_absolute():
-    # Si STRESS_TEST_TEMPLATE_FILE es relativo, buscar en el folder del ambiente
     env_template_file = script_dir / ENVIRONMENT / STRESS_TEST_TEMPLATE_FILE
     if env_template_file.exists():
         STRESS_TEST_TEMPLATE_FILE = str(env_template_file)
     else:
-        # Si no existe en el ambiente, buscar en la raíz
         root_template_file = script_dir / STRESS_TEST_TEMPLATE_FILE
         if root_template_file.exists():
             STRESS_TEST_TEMPLATE_FILE = str(root_template_file)
 
-# Ajustar LOGS_DIR al ambiente
 if LOGS_DIR and not Path(LOGS_DIR).is_absolute():
     LOGS_DIR = str(script_dir / ENVIRONMENT / LOGS_DIR)
 
-# Importar sale_transmission_builder desde el directorio del script (CreateSaleTransmission/)
+# Importar sale_transmission_builder desde el directorio del script
 script_dir = Path(__file__).parent
 builder_path = script_dir / "sale_transmission_builder.py"
 if not builder_path.exists():
@@ -204,31 +199,22 @@ TOPIC_ARN = CONFIG_TOPIC_ARN
 
 async def main_async() -> None:
     """Función principal - aquí está el flujo completo del script"""
-    # 1. Mostrar configuración
     print_configuration()
-
-    # 2. Obtener builder para construir envelopes
     envelope_builder = get_envelope_builder()
 
-    # 3. Cargar o generar SaleTransmission según el modo
     if STRESS_TEST_ENABLED:
         print(f"Generando {MAX_MESSAGES} SaleTransmission para pruebas de estrés...")
         if not STRESS_TEST_TEMPLATE_FILE:
             raise ValueError("STRESS_TEST_TEMPLATE_FILE es requerido cuando STRESS_TEST_ENABLED=True")
-        
-        # Cargar template (puede ser un objeto único o un array con un elemento)
         template_path = Path.cwd() / STRESS_TEST_TEMPLATE_FILE
         with open(template_path, "r", encoding="utf-8") as f:
             template_data = json.load(f)
-        
-        # Si es un array, tomar el primer elemento
         if isinstance(template_data, list):
             if len(template_data) == 0:
                 raise ValueError("El template no puede estar vacío")
             template = template_data[0]
         else:
             template = template_data
-        
         items = generate_sale_transmissions_for_stress_test(
             STRESS_TEST_BASE_SII_FOLIO,
             STRESS_TEST_START,
@@ -239,7 +225,6 @@ async def main_async() -> None:
     else:
         print("Cargando SaleTransmission desde archivo/lista...")
         items = load_sale_transmissions(INPUT_FILE, SALE_TRANSMISSIONS_LIST)
-        
         if not INPUT_FILE and not SALE_TRANSMISSIONS_LIST:
             raise ValueError(
                 "Debes especificar una de las siguientes opciones:\n"
@@ -247,12 +232,9 @@ async def main_async() -> None:
                 "  - SALE_TRANSMISSIONS_LIST: Lista directa de SaleTransmission\n"
                 "  - STRESS_TEST_ENABLED=True: Para generar mensajes automáticamente"
             )
-        
         if not items:
             print("No hay SaleTransmission para procesar. Abortando.")
             return
-        
-        # Aplicar MAX_MESSAGES: limitar o repetir según corresponda
         total_loaded = len(items)
         if MAX_MESSAGES and MAX_MESSAGES > 0:
             if total_loaded >= MAX_MESSAGES:
@@ -265,7 +247,6 @@ async def main_async() -> None:
         else:
             print(f"{len(items)} SaleTransmission cargados\n")
 
-    # 4. Verificar formato del primer mensaje
     if items:
         sale_transmission = items[0]
         envelope = envelope_builder(sale_transmission)
@@ -279,7 +260,6 @@ async def main_async() -> None:
         )
         print("===============================\n")
 
-    # 5. Crear publisher según TARGET (sqs, sns o both)
     if TARGET == "sqs":
         publisher = SQSPublisher(
             queue_url=QUEUE_URL,
@@ -300,13 +280,11 @@ async def main_async() -> None:
             SNSPublisher(topic_arn=TOPIC_ARN, region_name=REGION, max_concurrent=MAX_CONCURRENT, envelope_builder=envelope_builder),
         )
 
-    # 6. Enviar mensajes
     dest_label = "queue" if TARGET == "sqs" else "topic" if TARGET == "sns" else "queue y topic"
     print(f"📤 Enviando {len(items)} mensajes a la {dest_label}...")
     print(f"   • Tamaño de lote: {BATCH_SIZE}")
     print(f"   • Concurrencia máxima: {MAX_CONCURRENT}\n")
-    
-    # Usar envío en lotes si hay muchos mensajes, sino usar el método simple
+
     if len(items) > BATCH_SIZE:
         ok_count, error_count, sii_folios_sent = await send_in_batches(
             publisher, items, BATCH_SIZE, verbose=(len(items) <= 50)
@@ -316,10 +294,7 @@ async def main_async() -> None:
             publisher, items, envelope_builder, DELAY_MS, verbose=(len(items) <= 10)
         )
 
-    # 7. Guardar log de siiFolios
     log_file = save_sii_folios_log(sii_folios_sent)
-
-    # 8. Mostrar resumen
     print("\n" + "=" * 50)
     print("=== RESUMEN FINAL ===")
     print(f"Total: {len(items)}")
@@ -346,7 +321,6 @@ def print_configuration():
     print(f"🌍 Ambiente: {ENVIRONMENT.upper()} (definido en config.py general)")
     print(f"📁 Config específica: {ENVIRONMENT}/config.py")
     print()
-    
     if STRESS_TEST_ENABLED:
         print("🔧 Modo: PRUEBAS DE ESTRÉS")
         print(f"   • Base SiiFolio: {STRESS_TEST_BASE_SII_FOLIO}")
@@ -361,10 +335,8 @@ def print_configuration():
             print(f"   • Archivo: {INPUT_FILE}")
         else:
             print("   ⚠️  No se especificó INPUT_FILE ni SALE_TRANSMISSIONS_LIST")
-        
         if MAX_MESSAGES and MAX_MESSAGES > 0:
             print(f"   • Máximo de mensajes: {MAX_MESSAGES}")
-    
     print()
     print("🌐 Destino:")
     print(f"   • TARGET: {TARGET}")
@@ -386,13 +358,11 @@ def print_configuration():
 
 
 def get_envelope_builder() -> Callable[[Dict[str, Any]], Dict[str, Any]]:
-    """Obtiene el builder para construir el envelope del mensaje"""
-    # Usar EVENT_TYPE del config para que sea configurable
     def builder(sale_transmission: Dict[str, Any]) -> Dict[str, Any]:
         return MessageBuilder.build_envelope(
             sale_transmission,
             entity_type='saleTransmission',
-            event_type=EVENT_TYPE,  # Usar el EVENT_TYPE del config
+            event_type=EVENT_TYPE,
             subdomain='finmg',
             business_capacity='finmg',
             channel='web'
@@ -406,46 +376,29 @@ async def send_in_batches(
     batch_size: int,
     verbose: bool = False,
 ) -> tuple[int, int, List[str]]:
-    """Envía mensajes en lotes para optimizar el rendimiento
-    
-    Returns:
-        tuple: (ok_count, error_count, sii_folios_sent)
-    """
     total = len(items)
     ok_count = 0
     error_count = 0
     sii_folios_sent = []
-    
-    # Dividir en lotes
     batches = [items[i:i + batch_size] for i in range(0, total, batch_size)]
     total_batches = len(batches)
-    
     print(f"📦 Dividido en {total_batches} lote(s) de hasta {batch_size} mensajes cada uno\n")
-    
     for batch_idx, batch in enumerate(batches, 1):
         batch_start = (batch_idx - 1) * batch_size + 1
         batch_end = min(batch_start + len(batch) - 1, total)
-        
-        # Enviar el lote completo en paralelo
         results = await publisher.publish_batch(batch)
-        
-        # Procesar resultados del lote
         for item, result in zip(batch, results):
             sii_folio = item.get("siiFolio", "UNKNOWN")
             sii_folios_sent.append(sii_folio)
             status = result.get("status")
-            
             if status == "OK":
                 ok_count += 1
             else:
                 error_count += 1
                 if verbose or error_count <= 5:
                     print(f"✗ ERROR - {sii_folio}: {result.get('error')}")
-        
-        # Mostrar progreso
         if batch_idx <= 3 or batch_idx % 10 == 0 or batch_idx == total_batches:
             print(f"[Lote {batch_idx}/{total_batches}] ✓ {len(batch)} mensajes enviados (Total: {batch_end}/{total}, OK: {ok_count}, ERROR: {error_count})")
-    
     return ok_count, error_count, sii_folios_sent
 
 
@@ -456,20 +409,13 @@ async def send_one_by_one(
     delay_ms: int = 0,
     verbose: bool = False,
 ) -> tuple[int, int, List[str]]:
-    """Envía cada elemento uno a uno a SQS (para pocos mensajes)
-    
-    Returns:
-        tuple: (ok_count, error_count, sii_folios_sent)
-    """
     total = len(items)
     ok_count = 0
     error_count = 0
     sii_folios_sent = []
-
     for idx, item in enumerate(items, 1):
         sii_folio = item.get("siiFolio", "UNKNOWN")
         sii_folios_sent.append(sii_folio)
-
         if verbose and idx <= 3:
             envelope = envelope_builder(item)
             print(f"\n[{idx}/{total}] === VERIFICACIÓN DEL ENVELOPE ===")
@@ -479,10 +425,8 @@ async def send_one_by_one(
                 f"MessageAttributes.eventType.Value: {envelope.get('MessageAttributes', {}).get('eventType', {}).get('Value')}"
             )
             print("===============================")
-
         result = await publisher.publish_batch([item])
         status = result[0].get("status")
-
         if status == "OK":
             ok_count += 1
             if idx <= 10 or idx % 100 == 0 or idx == total:
@@ -490,52 +434,31 @@ async def send_one_by_one(
         else:
             error_count += 1
             print(f"[{idx}/{total}] ✗ ERROR - {sii_folio}: {result[0].get('error')}")
-
         if delay_ms > 0 and idx < total:
             await asyncio.sleep(delay_ms / 1000.0)
-
     return ok_count, error_count, sii_folios_sent
 
 
 def generate_log_filename() -> str:
-    """Genera el nombre del archivo de log basado en la fecha/hora
-    
-    Ejemplo: sii_folios_20250115_143022.json
-    """
-    # Crear carpeta logs si no existe
     logs_path = Path(LOGS_DIR)
     logs_path.mkdir(exist_ok=True)
-    
-    # Generar nombre con fecha/hora
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"sii_folios_{timestamp}.json"
     return str(logs_path / filename)
 
 
 def save_sii_folios_log(sii_folios: List[str]) -> str:
-    """Guarda los siiFolios procesados en un archivo para fácil identificación
-    
-    Returns:
-        str: Ruta del archivo guardado
-    """
     log_file = generate_log_filename()
-    
     log_data = {
         "total": len(sii_folios),
         "siiFolios": sii_folios,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
-    
     with open(log_file, "w", encoding="utf-8") as f:
         json.dump(log_data, f, indent=2, ensure_ascii=False)
-    
     print(f"✓ SiiFolios guardados en: {log_file}")
     return log_file
 
-
-# ============================================================================
-# PUNTO DE ENTRADA
-# ============================================================================
 
 if __name__ == "__main__":
     main()
