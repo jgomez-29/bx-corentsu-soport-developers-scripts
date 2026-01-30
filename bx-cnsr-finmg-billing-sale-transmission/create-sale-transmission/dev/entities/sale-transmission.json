@@ -1,0 +1,34 @@
+[
+  {
+    "society": "1700",
+    "type": "order",
+    "siiFolio": "2356633",
+    "docType": 16,
+    "docClass": "YB",
+    "account": "44298540-1-85",
+    "costDetail": {
+      "amount": 720,
+      "taxableAmount": 607,
+      "tax": 115,
+      "currency": "CLP",
+      "discount": {
+        "amount": 2,
+        "isFull": false
+      }
+    },
+    "prepaidEmission": {
+      "orderId": "1000246214",
+      "paymentType": "CC",
+      "transactionId": "e62e58af-ed8e-4613-82ef-e28bf087b275",
+      "method": "CA",
+      "collector": "BLUE",
+      "customerInfo": {
+        "identifier": "66666666-6",
+        "name": "John Dwayne",
+        "address": "456 Side St 789"
+      },
+      "amount": 607
+    },
+    "emissionDate": "2026-01-27T00:00:00.000Z"
+  }
+]
