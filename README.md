@@ -36,7 +36,7 @@ Dentro de cada una:
 
 ## Variables de entorno (solo sensibles)
 
-En la **raíz del repo** crea un archivo **`.env`** (no se sube a git):
+En la **raíz del repo** crea un archivo **`.env`** (no se sube a git). Puedes copiar **`.env.example`** y rellenar los valores:
 
 ```env
 AWS_REGION=us-east-1
@@ -50,7 +50,7 @@ AWS_ACCOUNT_ID=123456789012
 
 ## Cómo ejecutar un script
 
-1. Clonar el repo y crear `.env` en la raíz con `AWS_REGION` y `AWS_ACCOUNT_ID`.
+1. Clonar el repo, copiar `.env.example` a `.env` en la raíz y rellenar `AWS_REGION` y `AWS_ACCOUNT_ID`.
 2. En el `config.py` del caso de uso, elegir `ENVIRONMENT = "dev"` o `"qa"`.
 3. Ir a la carpeta del caso de uso y ejecutar:
 
