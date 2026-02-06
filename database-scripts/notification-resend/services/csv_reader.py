@@ -11,10 +11,10 @@ CSV esperado:
     Columnas: Date, Host, Service, #ordeId, #identifier, #recipient, Content
     Columnas que extraemos:
         - #identifier  → orderId
-        - #recipient   → email original (para referencia)
+        - #recipient   → email del destinatario (usado para el reenvío)
 
 JSON de retry esperado:
-    El JSON generado por save_log() en run_resend.py.
+    El JSON generado por save_log() en run.py.
     Contiene "results" con objetos que tienen "order_id" y "status".
     Se filtran solo los que NO tienen status "SENT".
 """
@@ -22,10 +22,12 @@ JSON de retry esperado:
 import csv
 import json
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 
-def read_notification_errors(csv_path: str) -> List[Dict[str, str]]:
+def read_notification_errors(
+    csv_path: str,
+) -> Tuple[List[Dict[str, str]], Dict[str, str]]:
     """
     Lee el CSV de errores de notificación y extrae los datos relevantes.
 
@@ -33,17 +35,18 @@ def read_notification_errors(csv_path: str) -> List[Dict[str, str]]:
         csv_path: Ruta al archivo CSV
 
     Returns:
-        Lista de diccionarios con:
-            - order_id: identificador de la orden (#identifier)
-            - recipient: email original (#recipient)
+        Tupla de:
+            - Lista de diccionarios con: order_id, recipient
+            - Diccionario de mapeo: order_id → recipient (email del CSV)
     """
     path = Path(csv_path)
     if not path.exists():
         raise FileNotFoundError(f"No se encontró el archivo CSV: {csv_path}")
 
     records = []
+    email_map = {}
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
 
         for row in reader:
@@ -53,12 +56,18 @@ def read_notification_errors(csv_path: str) -> List[Dict[str, str]]:
             if not identifier:
                 continue
 
-            records.append({
-                "order_id": identifier,
-                "recipient": recipient,
-            })
+            records.append(
+                {
+                    "order_id": identifier,
+                    "recipient": recipient,
+                }
+            )
 
-    return records
+            # Mapeo: order_id → email (el primero que se encuentra)
+            if identifier not in email_map and recipient:
+                email_map[identifier] = recipient
+
+    return records, email_map
 
 
 def get_unique_order_ids(records: List[Dict[str, str]]) -> List[str]:

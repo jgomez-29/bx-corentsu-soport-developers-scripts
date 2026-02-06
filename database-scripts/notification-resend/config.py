@@ -2,10 +2,10 @@
 Configuración general para el script de reenvío de notificaciones.
 
 Flujo:
-    1. Lee CSV (reports/) → obtiene orderIds
+    1. Lee CSV (reports/) → obtiene orderIds y emails (#recipient)
     2. Consulta MongoDB orders → obtiene siiFolio
     3. Consulta MongoDB invoices → obtiene siiDocumentPath y totalToPay
-    4. Llama a la API de notificaciones con los datos recolectados
+    4. Llama a la API de notificaciones con los datos recolectados (usando email del CSV)
 
 Variables de entorno requeridas (en .env de la raíz del repo):
     MONGO_URI       → URI completa de conexión a MongoDB
@@ -32,7 +32,7 @@ MONGO_DATABASE = os.getenv("MONGO_DATABASE", "")
 # ============================================================================
 
 # URL base del servicio de notificaciones (ajustar según ambiente)
-NOTIFICATION_API_BASE_URL = "https://bx-app-prdr-notif-dispatch-gateway.qa.blue.private"
+NOTIFICATION_API_BASE_URL = "https://bx-app-prdr-notif-dispatch-gateway.blue.private"
 
 # Template de correo a utilizar
 TEMPLATE_NAME = "billing-core-order-biling-mail"
@@ -40,8 +40,8 @@ TEMPLATE_NAME = "billing-core-order-biling-mail"
 # Dirección de envío
 FROM_ADDRESS = "noreply@blue.cl"
 
-# Email destino para modo DRY_RUN (pruebas). Se usa en lugar del buyer.email real.
-# En modo normal (DRY_RUN=False) se usa el buyer.email de la orden en MongoDB.
+# Email destino para modo DRY_RUN (pruebas). Se usa en lugar del email del CSV.
+# En modo normal (DRY_RUN=False) se usa el email (#recipient) del CSV de errores.
 DRY_RUN_EMAIL = "johann.gomez@blue.cl"
 
 # ============================================================================

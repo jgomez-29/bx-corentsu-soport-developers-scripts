@@ -85,8 +85,8 @@ def build_notification_request(
 
 # Headers requeridos por la API
 NOTIFICATION_HEADERS = {
-    "X-Team-Domain": "Domain",
-    "X-Team-Subdomain": "Subdomain",
-    "X-Team-Capability": "Capability",
+    "X-Team-Domain": "corentsu",
+    "X-Team-Subdomain": "soport",
+    "X-Team-Capability": "finmg",
     "Content-Type": "application/json",
 }

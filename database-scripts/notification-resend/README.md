@@ -4,10 +4,10 @@ Script para reenviar notificaciones de correo a usuarios, basándose en errores 
 
 ## Flujo
 
-1. **Lee CSV** (`reports/notification-errors.csv`) → extrae `orderId` (columna `#identifier`)
-2. **Consulta MongoDB `orders`** por `orderId` → obtiene `billing.siiFolio` y `buyer.email`
+1. **Lee CSV** (`reports/notification-errors.csv`) → extrae `orderId` (columna `#identifier`) y `email` (columna `#recipient`)
+2. **Consulta MongoDB `orders`** por `orderId` → obtiene `billing.siiFolio`
 3. **Consulta MongoDB `invoices`** por `{ siiFolio, relatedElements.identifier: orderId }` → obtiene `siiDocumentPath` y `totalDetail.totalToPay`
-4. **Llama a la API** de notificaciones con los datos recolectados para enviar el correo
+4. **Llama a la API** de notificaciones con los datos recolectados para enviar el correo al email obtenido del CSV
 
 ## Estructura
 
@@ -31,12 +31,17 @@ notification-resend/
 
 ## Campos por colección
 
+### CSV de entrada (notification-errors.csv)
+| Columna | Uso |
+|---------|-----|
+| `#identifier` | orderId para buscar en BD |
+| `#recipient` | Email del destinatario para reenvío |
+
 ### orders (soport-orders.orders)
 | Campo | Uso |
 |-------|-----|
 | `orderId` | Filtro de búsqueda |
 | `billing.siiFolio` | Para buscar la factura asociada |
-| `buyer.email` | Email real del destinatario (modo producción) |
 
 ### invoices (soport-orders.invoices)
 | Campo | Uso |
@@ -81,7 +86,7 @@ El script pide por terminal:
 |------|--------------|-----------|
 | DRY_RUN + límite | Email de prueba (configurable por terminal) | Solo los primeros N |
 | DRY_RUN sin límite | Email de prueba | Todos |
-| Producción | `buyer.email` real de cada orden | Todos |
+| Producción | Email del CSV (`#recipient`) de cada orden | Todos |
 | Retry | Según DRY_RUN | Solo los fallidos del log seleccionado |
 
 ### Logs
