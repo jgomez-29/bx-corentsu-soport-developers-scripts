@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-02-06T18:22:29.424690+00:00",
+  "retry": false,
+  "retry_source": null,
+  "dry_run": true,
+  "dry_run_email": "johann.gomez@blue.cl",
+  "total": 2,
+  "sent": 0,
+  "dry_run_count": 0,
+  "errors": 2,
+  "results": [
+    {
+      "order_id": "2209217382",
+      "status": "ORDER_NOT_FOUND"
+    },
+    {
+      "order_id": "2206578463",
+      "status": "ORDER_NOT_FOUND"
+    }
+  ]
+}

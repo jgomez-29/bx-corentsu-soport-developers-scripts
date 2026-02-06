@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-02-06T18:37:03.399365+00:00",
+  "retry": false,
+  "retry_source": null,
+  "dry_run": true,
+  "dry_run_email": "johann.gomez@blue.cl",
+  "total": 1,
+  "sent": 0,
+  "errors": 1,
+  "results": [
+    {
+      "order_id": "2209217382",
+      "status": "INVOICE_NOT_FOUND",
+      "sii_folio": "5613057",
+      "buyer_email": "janalafu@gmail.com"
+    }
+  ]
+}

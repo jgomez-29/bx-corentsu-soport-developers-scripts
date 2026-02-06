@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-02-06T19:46:11.034971+00:00",
+  "retry": false,
+  "retry_source": null,
+  "dry_run": true,
+  "dry_run_email": "johann.gomez@blue.cl",
+  "total": 2,
+  "sent": 2,
+  "errors": 0,
+  "results": [
+    {
+      "order_id": "2209217382",
+      "status": "SENT",
+      "sii_folio": "5613057",
+      "buyer_email": "janalafu@gmail.com",
+      "sii_document_path": "http://windte2602.acepta.com/ca4webv3/PdfView?url=http://windte2602.acepta.com/v01/CDCE8948C7FEA1D2996691ACD8D87F16D7D2A1F6?k=8f44dfd14bcf9ab01dfe2a8aae3dfd48",
+      "total_to_pay": 3010,
+      "recipient_email": "johann.gomez@blue.cl",
+      "api_status": "OK",
+      "api_status_code": 202
+    },
+    {
+      "order_id": "2206578463",
+      "status": "SENT",
+      "sii_folio": "5612858",
+      "buyer_email": "g@gmail.com",
+      "sii_document_path": "http://windte2602.acepta.com/ca4webv3/PdfView?url=http://windte2602.acepta.com/v01/EC4C835EAE2E6353924939AE50DD5C408890857E?k=e229f25af2b826a93b0d2cbd62b48ef6",
+      "total_to_pay": 9200,
+      "recipient_email": "johann.gomez@blue.cl",
+      "api_status": "OK",
+      "api_status_code": 202
+    }
+  ]
+}
