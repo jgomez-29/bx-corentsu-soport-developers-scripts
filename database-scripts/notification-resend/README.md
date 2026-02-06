@@ -25,7 +25,7 @@ notification-resend/
 ├── reports/
 │   └── notification-errors.csv        # CSV de entrada con errores de notificación
 ├── logs/                              # Logs de ejecución (generados automáticamente)
-├── run_resend.py                      # Script orquestador principal
+├── run.py                             # Script orquestador principal
 └── README.md
 ```
 
@@ -64,7 +64,7 @@ MONGO_DATABASE=soport-orders
 ## Uso
 
 ```bash
-python ./database-scripts/notification-resend/run_resend.py
+python ./database-scripts/notification-resend/run.py
 ```
 
 El script pide por terminal:
