@@ -1,9 +1,9 @@
-# Scripts de envío a SQS / SNS
+# Scripts de Operaciones Backend
 
-Repositorio de scripts Python para enviar mensajes a colas SQS y/o topics SNS (AWS).
+Repositorio de scripts Python para operaciones de backend: envío de mensajes a SQS/SNS (AWS) y scripts de base de datos (MongoDB).
 
-- Configuración por ambiente: **dev** y **qa**.
 - Código compartido en el módulo **`common/`**.
+- Sin datos sensibles en el repo (solo en `.env`).
 
 ---
 
@@ -11,9 +11,15 @@ Repositorio de scripts Python para enviar mensajes a colas SQS y/o topics SNS (A
 
 ### `common/`
 
-Código compartido: publicadores SQS/SNS y builders de mensajes.
+Código compartido reutilizable:
 
-### Carpetas por caso de uso
+| Módulo | Qué hace |
+|--------|----------|
+| `common/sqs/` | Publicador SQS y message builder |
+| `common/sns/` | Publicador SNS |
+| `common/mongo/` | Cliente MongoDB reutilizable (`MongoConnection`, context manager) |
+
+### Scripts SQS/SNS (`bx-cnsr-*`)
 
 Cada caso de uso vive en su propia carpeta. Ejemplos:
 
@@ -26,47 +32,78 @@ Dentro de cada una:
 | Archivo o carpeta | Qué es |
 |-------------------|--------|
 | `config.py` | Config general: ambiente, TARGET, entidad, límites, etc. |
-| `dev/config.py` y `qa/config.py` | Config por ambiente. Nombres de cola/topic (no sensibles). URL/ARN se construyen con región y cuenta. |
-| `send_message.py` | Script principal: carga config, resuelve raíz del repo, importa `common/`, envía mensajes. Según `TARGET` en config envía a SQS, SNS o ambos. |
+| `dev/config.py` y `qa/config.py` | Config por ambiente. Nombres de cola/topic. URL/ARN se construyen con región y cuenta. |
+| `send_message.py` | Script principal: carga config, resuelve raíz del repo, importa `common/`, envía mensajes. |
 | `*_builder.py` | Construye payloads y envelopes según el caso de uso. |
 | `dev/entities/`, `qa/entities/` | JSON de entrada por ambiente. |
-| `dev/logs/`, `qa/logs/` | Logs de ejecución por ambiente. |
+
+### Scripts de base de datos (`database-scripts/`)
+
+Scripts para operaciones contra MongoDB u otros datastores. Cada sub-carpeta es un script independiente:
+
+| Script | Descripción | Ejecución |
+|--------|-------------|-----------|
+| `import-uf-values/` | Importa valores UF desde CSVs a MongoDB | `python ./database-scripts/import-uf-values/run.py` |
+| `notification-resend/` | Reenvía notificaciones consultando MongoDB + API | `python ./database-scripts/notification-resend/run.py` |
+
+Dentro de cada uno:
+
+| Archivo o carpeta | Qué es |
+|-------------------|--------|
+| `config.py` | Config general: `MONGO_URI`/`MONGO_DATABASE` de env, DRY_RUN, rutas |
+| `run.py` | Script orquestador principal (prompts interactivos, lógica, logs) |
+| `entities/` | Estructura del documento MongoDB (tipos, campos, ejemplos) |
+| `repositories/` | Acceso a colecciones: constante `COLLECTION_NAME`, funciones de consulta/inserción |
+| `services/` | Lógica de negocio: parseo de CSV, clientes HTTP, etc. |
+| `reports/` o `*-reports/` | Archivos de entrada (CSV, JSON) |
+| `logs/` | Logs JSON de ejecución (generados automáticamente, ignorados por git) |
+
+Cada script tiene su propio `README.md` con detalle completo.
 
 ---
 
-## Variables de entorno (solo sensibles)
+## Variables de entorno
 
-En la **raíz del repo** crea un archivo **`.env`** (no se sube a git). Puedes copiar **`.env.example`** y rellenar los valores:
+En la **raíz del repo** crea un archivo **`.env`** (no se sube a git). Puedes copiar **`.env.example`** y rellenar:
 
 ```env
+# AWS (scripts SQS/SNS)
 AWS_REGION=us-east-1
 AWS_ACCOUNT_ID=123456789012
+
+# MongoDB (database-scripts)
+MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/
+MONGO_DATABASE=nombre-base-datos
 ```
 
-- Los **nombres** de cola y topic van en `dev/config.py` y `qa/config.py` (`QUEUE_NAME`, `TOPIC_NAME`). No son sensibles.
-- La URL de SQS y el ARN de SNS se construyen en código a partir de región, cuenta y nombre.
+---
+
+## Cómo ejecutar
+
+### Scripts SQS/SNS
+
+```bash
+python ./bx-cnsr-finmg-billing/proforma-detailed/send_message.py
+```
+
+### Scripts de base de datos
+
+```bash
+python ./database-scripts/import-uf-values/run.py
+python ./database-scripts/notification-resend/run.py
+```
+
+Los scripts de base de datos tienen prompts interactivos (DRY_RUN, límites, confirmación).
 
 ---
 
-## Cómo ejecutar un script
+## Añadir algo nuevo
 
-1. Clonar el repo, copiar `.env.example` a `.env` en la raíz y rellenar `AWS_REGION` y `AWS_ACCOUNT_ID`.
-2. En el `config.py` del caso de uso, elegir `ENVIRONMENT = "dev"` o `"qa"`.
-3. Ir a la carpeta del caso de uso y ejecutar:
+Seguir las instrucciones para Copilot en:
 
-   ```bash
-   python send_message.py
-   ```
+- **`.github/copilot-instructions.md`** – Reglas generales del repo (estructura, config, seguridad).
+- **`.github/instructions/scripts.instructions.md`** – Reglas al editar scripts SQS/SNS o `common/`.
+- **`.github/instructions/database-scripts.instructions.md`** – Reglas al editar database-scripts o `common/mongo/`.
+- **`.github/instructions/readme.instructions.md`** – Reglas al editar READMEs.
 
-Cada caso de uso tiene su propio `README.md` con más detalle (entidades, modos, etc.).
-
----
-
-## Añadir un nuevo caso de uso
-
-Usar la misma estructura que los existentes y seguir las instrucciones para Copilot en:
-
-- **`.github/copilot-instructions.md`** – Reglas de todo el repo (estructura, config, README).
-- **`.github/instructions/scripts.instructions.md`** – Reglas al editar scripts o `common/` (path-specific).
-
-Así Copilot genera y mantiene código alineado con este estándar.
+Así Copilot (u otra IA) genera y mantiene código alineado con los patrones del repo.
