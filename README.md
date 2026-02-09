@@ -8,7 +8,7 @@ Repositorio de scripts Python para operaciones de backend: envío de mensajes a 
 ---
 
 ## Estructura del repo
-
+pa
 ### `common/`
 
 Código compartido reutilizable:
