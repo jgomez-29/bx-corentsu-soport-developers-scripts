@@ -64,7 +64,18 @@ python ./database-scripts/boletas-generation/run.py
 
 ## Respuesta de la API
 
-La API retorna una lista de documentos:
+La API usa **paginación por cursor**. Cada respuesta tiene la forma:
+
+```json
+{
+  "data": [ ... documentos ... ],
+  "pagination": { "limit": 100, "hasMore": true, "nextCursor": "..." }
+}
+```
+
+El script solicita automáticamente todas las páginas (enviando `cursor` en la siguiente petición) hasta que `hasMore` sea `false`, y concatena todos los documentos en una sola lista para el procesamiento.
+
+Cada elemento de `data` es un documento con la siguiente estructura:
 
 ### Documento exitoso
 ```json

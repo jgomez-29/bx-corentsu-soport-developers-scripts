@@ -17,7 +17,7 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 
 # ── Resolver raíz del repo (donde está common/) ──────────────────────────────
 current_path = Path(__file__).parent
@@ -121,13 +121,13 @@ def select_input_file() -> str:
         return excel_files[0].name
 
     # Múltiples archivos: dejar seleccionar
-    print(f"\nArchivos Excel encontrados en reports/:")
+    print("\nArchivos Excel encontrados en reports/:")
     for i, file in enumerate(excel_files, 1):
         print(f"  {i}. {file.name}")
     print()
 
     while True:
-        resp = input(f"Selecciona el número del archivo a procesar [1]: ").strip()
+        resp = input("Selecciona el número del archivo a procesar [1]: ").strip()
         if not resp:
             return excel_files[0].name
         try:
@@ -176,18 +176,15 @@ def collect_user_input():
 # FUNCIÓN PRINCIPAL
 # ============================================================================
 
-def main():
-    # Prompts interactivos
-    collect_user_input()
 
-    # Validar variables de entorno
+def _validate_config() -> None:
+    """Valida variables de entorno requeridas."""
     if not config.BOLETAS_API_URL:
         raise ValueError(
             "BOLETAS_API_URL no está definida. Agrégala en el archivo .env de la raíz del repo.\n"
             f"  Ruta esperada: {repo_root / '.env'}\n"
             "  Ejemplo: BOLETAS_API_URL=http://localhost:3000"
         )
-
     if not config.BOLETAS_REQUEST_ID:
         raise ValueError(
             "BOLETAS_REQUEST_ID no está definida. Agrégala en el archivo .env de la raíz del repo.\n"
@@ -195,106 +192,104 @@ def main():
             "  Ejemplo: BOLETAS_REQUEST_ID=YmF0Y2hfMTc3MDIxMTE2MTQzMl8yODZlODlkMC1mYTU3LTQ1ODctOGY5MS0zOTc5YzAyNGM0MWQ="
         )
 
-    # Mostrar resumen y pedir confirmación
-    print_configuration()
 
-    # 1. Leer Excel de entrada
-    excel_path = resolve_path(f"./reports/{config.INPUT_FILE}")
-    print(f"Leyendo Excel: {excel_path}")
-
-    try:
-        wb, excel_records, hes_column = read_excel_data(str(excel_path))
-        print(f"  → {len(excel_records)} registros con HESCode encontrados\n")
-    except (FileNotFoundError, ValueError) as e:
-        print(f"  ✗ Error al leer el Excel: {e}")
-        return
-
-    if not excel_records:
-        print("No se encontraron registros con HESCode en el Excel.")
-        return
-
-    # Aplicar límite en modo DRY_RUN
+def _read_excel_and_limit(excel_path: Path):
+    """Lee el Excel y aplica DRY_RUN_LIMIT si corresponde. Returns (wb, excel_records, total_excel)."""
+    wb, excel_records, _ = read_excel_data(str(excel_path))
+    print(f"  → {len(excel_records)} registros con HESCode encontrados\n")
     total_excel = len(excel_records)
     if config.DRY_RUN and config.DRY_RUN_LIMIT > 0:
         excel_records = excel_records[:config.DRY_RUN_LIMIT]
         print(f"  [DRY_RUN] Limitado a {len(excel_records)} de {total_excel} registros (DRY_RUN_LIMIT={config.DRY_RUN_LIMIT})\n")
+    return wb, excel_records, total_excel
 
-    # 2. Consultar API
+
+def _fetch_api_data() -> List[dict]:
+    """Consulta la API y devuelve la lista de documentos."""
     print(f"Consultando API: {config.BOLETAS_API_URL}{config.API_ENDPOINT}{config.BOLETAS_REQUEST_ID[:30]}...")
+    api_data = fetch_boletas_data(
+        base_url=config.BOLETAS_API_URL,
+        request_id=config.BOLETAS_REQUEST_ID,
+        endpoint=config.API_ENDPOINT,
+    )
+    print(f"  → {len(api_data)} documentos recibidos de la API\n")
+    return api_data
 
-    try:
-        api_data = fetch_boletas_data(
-            base_url=config.BOLETAS_API_URL,
-            request_id=config.BOLETAS_REQUEST_ID,
-            endpoint=config.API_ENDPOINT,
-        )
-        print(f"  → {len(api_data)} documentos recibidos de la API\n")
-    except Exception as e:
-        print(f"  ✗ Error al consultar la API: {e}")
-        return
 
-    # 3. Hacer match y procesar
-    print("Procesando registros...")
-    api_lookup = create_api_lookup(api_data)
-    results = process_records(excel_records, api_lookup)
-
-    # Contar por status
+def _print_results_summary(results: List[dict]) -> None:
+    """Imprime resumen de success/error/not_found."""
     success_count = sum(1 for r in results if r["status"] == "SUCCESS")
     error_count = sum(1 for r in results if r["status"] == "ERROR")
     not_found_count = sum(1 for r in results if r["status"] == "NOT_FOUND")
-
     print(f"  ✓ {success_count} exitosos (con BTECode)")
     print(f"  ✗ {error_count} con errores")
     if not_found_count > 0:
         print(f"  ⚠ {not_found_count} no encontrados en API")
     print()
 
-    # Modo DRY_RUN: solo mostrar preview
-    if config.DRY_RUN:
-        print(f"[DRY_RUN] Preview de {len(results)} registros:\n")
-        for result in results[:10]:  # Mostrar máximo 10
-            status_symbol = "✓" if result["status"] == "SUCCESS" else "✗"
-            print(f"  {status_symbol} HESCode={result['hes_code']} | BOLETA={result['boleta']} | ERROR={result['detalle_errores']}")
 
-        print(f"\n[DRY_RUN] No se generó el Excel de salida.")
-        print(f"  Para ejecutar de verdad, selecciona DRY_RUN = No\n")
+def _run_dry_run(results: List[dict], api_data: List[dict], total_excel: int) -> None:
+    """Muestra preview y guarda log en modo DRY_RUN."""
+    print(f"[DRY_RUN] Preview de {len(results)} registros:\n")
+    for result in results[:10]:
+        status_symbol = "✓" if result["status"] == "SUCCESS" else "✗"
+        print(f"  {status_symbol} HESCode={result['hes_code']} | BOLETA={result['boleta']} | ERROR={result['detalle_errores']}")
+    print("\n[DRY_RUN] No se generó el Excel de salida.")
+    print("  Para ejecutar de verdad, selecciona DRY_RUN = No\n")
+    save_log(total_excel=total_excel, total_api=len(api_data), results=results, output_file=None, dry_run=True)
 
-        # Guardar log del dry run
-        save_log(
-            total_excel=total_excel,
-            total_api=len(api_data),
-            results=results,
-            output_file=None,
-            dry_run=True,
-        )
-        return
 
-    # 4. Generar Excel de salida
+def _run_full_generation(wb, results: List[dict], api_data: List[dict], total_excel: int) -> None:
+    """Genera Excel de salida, resumen y log (modo no DRY_RUN)."""
+    success_count = sum(1 for r in results if r["status"] == "SUCCESS")
+    error_count = sum(1 for r in results if r["status"] == "ERROR")
+    not_found_count = sum(1 for r in results if r["status"] == "NOT_FOUND")
     output_filename = generate_output_filename(config.INPUT_FILE)
     output_path = resolve_path(f"{config.OUTPUT_DIR}/{output_filename}")
-
-    # Confirmación antes de generar
     if sys.stdin.isatty():
         print(f"Se generará el archivo: {output_filename}")
-        confirm = prompt_yes_no("¿Confirmar generación?", True)
-        if not confirm:
+        if not prompt_yes_no("¿Confirmar generación?", True):
             print("\nGeneración cancelada por el usuario.")
             return
         print()
-
     print(f"Generando Excel de salida: {output_path}")
     write_output_excel(wb, results, str(output_path))
-    print(f"  ✓ Excel generado correctamente\n")
-
-    # 5. Resumen y log
+    print("  ✓ Excel generado correctamente\n")
     print_summary(success_count, error_count, not_found_count, total_excel)
-    save_log(
-        total_excel=total_excel,
-        total_api=len(api_data),
-        results=results,
-        output_file=str(output_path),
-        dry_run=False,
-    )
+    save_log(total_excel=total_excel, total_api=len(api_data), results=results, output_file=str(output_path), dry_run=False)
+
+
+def main():
+    collect_user_input()
+    _validate_config()
+    print_configuration()
+
+    excel_path = resolve_path(f"./reports/{config.INPUT_FILE}")
+    print(f"Leyendo Excel: {excel_path}")
+    try:
+        wb, excel_records, total_excel = _read_excel_and_limit(excel_path)
+    except (FileNotFoundError, ValueError) as e:
+        print(f"  ✗ Error al leer el Excel: {e}")
+        return
+    if not excel_records:
+        print("No se encontraron registros con HESCode en el Excel.")
+        return
+
+    try:
+        api_data = _fetch_api_data()
+    except Exception as e:
+        print(f"  ✗ Error al consultar la API: {e}")
+        return
+
+    print("Procesando registros...")
+    api_lookup = create_api_lookup(api_data)
+    results = process_records(excel_records, api_lookup)
+    _print_results_summary(results)
+
+    if config.DRY_RUN:
+        _run_dry_run(results, api_data, total_excel)
+        return
+    _run_full_generation(wb, results, api_data, total_excel)
 
 
 # ============================================================================
@@ -340,7 +335,7 @@ def print_summary(success: int, errors: int, not_found: int, total: int):
 
 
 def save_log(total_excel: int, total_api: int, results: List[dict],
-             output_file: str, dry_run: bool):
+             output_file: Optional[str], dry_run: bool):
     """
     Guarda un log JSON detallado con el resultado de cada registro.
     """
