@@ -1,0 +1,53 @@
+{
+    "identifier": "2217046801",
+    "identifierType": "order",
+    "account": "19749690-1-85",
+    "createBy": "stress-script",
+    "society": "1700",
+    "billing": {
+        "documentType": "16",
+        "transaction": {
+            "paymentMethod": "CA",
+            "transactionId": "2bf62f56-a343-4ade-ac3b-d0b409c94465",
+            "paymentType": "EPP",
+            "collector": "BLUE"
+        },
+        "rut": "66666666-6",
+        "name": "elizabeth ortega",
+        "giro": "",
+        "address": "Santo Domingo 1160",
+        "city": "",
+        "commune": "SANTIAGO",
+        "sellCondition": "",
+        "phone": "958558279",
+        "email": "a@gmail.com"
+    },
+    "details": [
+        {
+            "description": "TRANSPORTE DE CARGA - OS 2205624046",
+            "unitaryValue": 6134,
+            "totalValue": 6134,
+            "quantity": 1,
+            "isExempt": false,
+            "isDiscount": false
+        },
+        {
+            "description": "DESCUENTO BLUE (-)",
+            "unitaryValue": 1534,
+            "totalValue": 1534,
+            "quantity": 1,
+            "isExempt": false,
+            "isDiscount": true
+        }
+    ],
+    "attachments": [],
+    "totalDetail": {
+        "exemptSubtotal": 0,
+        "taxableSubTotal": 4601,
+        "discount": 0,
+        "tax": 874,
+        "cashAdjustment": -5,
+        "total": 5475,
+        "totalToPay": 5470
+    }
+}

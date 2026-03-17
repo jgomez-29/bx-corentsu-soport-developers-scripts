@@ -171,10 +171,25 @@ def main():
     for csv_file in csv_files:
         documents = parse_csv_file(str(csv_file))
         csv_stats[csv_file.name] = len(documents)
-        all_documents.extend(documents)
+        mtime = csv_file.stat().st_mtime  # para deduplicar por "reporte más actual"
+        for doc in documents:
+            doc["_source_mtime"] = mtime
+            all_documents.append(doc)
         print(f"  {csv_file.name}: {len(documents)} registros parseados")
 
     print(f"\n  Total: {len(all_documents)} registros parseados de {len(csv_files)} archivo(s)\n")
+
+    # Deduplicar por fecha: si la misma fecha viene de varios CSV, se queda el del reporte más actual (archivo modificado más recientemente)
+    original_count = len(all_documents)
+    all_documents.sort(key=lambda d: (d["date"].isoformat(), -d["_source_mtime"]))
+    by_date = {}
+    for doc in all_documents:
+        key = doc["date"].isoformat()
+        if key not in by_date:
+            by_date[key] = doc
+    all_documents = [{"date": d["date"], "value": d["value"]} for d in by_date.values()]
+    if len(all_documents) < original_count:
+        print(f"  Fechas repetidas entre archivos: {original_count - len(all_documents)} duplicados omitidos (se mantuvo el valor del reporte más actual).\n")
 
     if not all_documents:
         print("No se encontraron registros válidos en los CSVs.")
@@ -231,10 +246,10 @@ def main():
         detail_results = []
 
         for doc in all_documents:
-            date_iso = doc["date"].isoformat()
-            if date_iso in existing_dates:
+            date_key = doc["date"].strftime("%Y-%m-%d")  # mismo formato que find_existing_dates
+            if date_key in existing_dates:
                 detail_results.append({
-                    "date": date_iso,
+                    "date": doc["date"].isoformat(),
                     "value": doc["value"],
                     "status": "ALREADY_EXISTS",
                     "reason": "Ya existía en la colección, no se reemplazó",
@@ -242,7 +257,7 @@ def main():
             else:
                 new_documents.append(doc)
                 detail_results.append({
-                    "date": date_iso,
+                    "date": doc["date"].isoformat(),
                     "value": doc["value"],
                     "status": "PENDING_INSERT",
                     "reason": None,
@@ -250,7 +265,7 @@ def main():
 
         already_exist_count = sum(1 for r in detail_results if r["status"] == "ALREADY_EXISTS")
 
-        print(f"  Registros ya existentes en DB: {already_exist_count}")
+        print(f"  Registros ya existentes en DB: {already_exist_count} (no se sobrescriben)")
         print(f"  Registros nuevos a insertar:   {len(new_documents)}")
         print()
 

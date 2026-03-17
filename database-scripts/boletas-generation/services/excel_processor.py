@@ -36,15 +36,20 @@ def translate_error_message(error_msg: str) -> str:
         return ""
 
     # Patrón: communeName: Commune 'X' does not exist in region 'Y'
-    match = re.search(r"communeName: Commune '([^']+)' does not exist in region '([^']+)'", error_msg)
+    match = re.search(
+        r"communeName: Commune '([^']+)' does not exist in region '([^']+)'", error_msg
+    )
     if match:
         commune = match.group(1)
         region = match.group(2)
         return f"Comuna '{commune}' no existe en la región '{region}'"
 
     # Patrón: sii_error: Failed to extract hidden fields: ...
-    if "sii_error" in error_msg.lower() and "failed to extract hidden fields" in error_msg.lower():
-        return "Error del SII: No se pudieron extraer campos ocultos del formulario"
+    if (
+        "sii_error" in error_msg.lower()
+        and "failed to extract hidden fields" in error_msg.lower()
+    ):
+        return "Error interno de SII: la boleta debe ser generada manualmente"
 
     # Patrón: PROVIDER_IDENTIFIER_FORMAT_NOT_VALID
     if error_msg == "PROVIDER_IDENTIFIER_FORMAT_NOT_VALID":
@@ -99,7 +104,9 @@ def read_excel_data(excel_path: str) -> Tuple[Workbook, List[Dict[str, Any]], in
 
     hes_column = find_hes_column(ws)
     if not hes_column:
-        raise ValueError(f"No se encontró una columna con 'HES' en el header del Excel: {excel_path}")
+        raise ValueError(
+            f"No se encontró una columna con 'HES' en el header del Excel: {excel_path}"
+        )
 
     records = []
     for row_idx, row in enumerate(ws.iter_rows(min_row=2), start=2):  # Skip header
@@ -107,10 +114,12 @@ def read_excel_data(excel_path: str) -> Tuple[Workbook, List[Dict[str, Any]], in
         if hes_value is not None:
             try:
                 hes_code = int(hes_value)
-                records.append({
-                    "row_index": row_idx,
-                    "hes_code": hes_code,
-                })
+                records.append(
+                    {
+                        "row_index": row_idx,
+                        "hes_code": hes_code,
+                    }
+                )
             except (ValueError, TypeError):
                 # Valor no numérico, se ignora
                 continue
@@ -139,7 +148,9 @@ def create_api_lookup(api_data: List[Dict[str, Any]]) -> Dict[int, Dict[str, Any
     return lookup
 
 
-def process_records(excel_records: List[Dict[str, Any]], api_lookup: Dict[int, Dict[str, Any]]) -> List[Dict[str, Any]]:
+def process_records(
+    excel_records: List[Dict[str, Any]], api_lookup: Dict[int, Dict[str, Any]]
+) -> List[Dict[str, Any]]:
     """
     Procesa los registros del Excel haciendo match con los datos de la API.
 
@@ -167,33 +178,39 @@ def process_records(excel_records: List[Dict[str, Any]], api_lookup: Dict[int, D
         if api_doc is None:
             # No se encontró en la API
             error_raw = "NO_ENCONTRADO_EN_API"
-            results.append({
-                "row_index": row_index,
-                "hes_code": hes_code,
-                "boleta": 0,
-                "detalle_errores": translate_error_message(error_raw),
-                "status": "NOT_FOUND",
-            })
+            results.append(
+                {
+                    "row_index": row_index,
+                    "hes_code": hes_code,
+                    "boleta": 0,
+                    "detalle_errores": translate_error_message(error_raw),
+                    "status": "NOT_FOUND",
+                }
+            )
         elif is_success(api_doc):
             # Exitoso
             bte_code = extract_bte_code(api_doc) or 0
-            results.append({
-                "row_index": row_index,
-                "hes_code": hes_code,
-                "boleta": bte_code,
-                "detalle_errores": "",
-                "status": "SUCCESS",
-            })
+            results.append(
+                {
+                    "row_index": row_index,
+                    "hes_code": hes_code,
+                    "boleta": bte_code,
+                    "detalle_errores": "",
+                    "status": "SUCCESS",
+                }
+            )
         else:
             # Error
             error_raw = extract_error_message(api_doc) or "ERROR_DESCONOCIDO"
-            results.append({
-                "row_index": row_index,
-                "hes_code": hes_code,
-                "boleta": 0,
-                "detalle_errores": translate_error_message(error_raw),
-                "status": "ERROR",
-            })
+            results.append(
+                {
+                    "row_index": row_index,
+                    "hes_code": hes_code,
+                    "boleta": 0,
+                    "detalle_errores": translate_error_message(error_raw),
+                    "status": "ERROR",
+                }
+            )
 
     return results
 
@@ -243,11 +260,13 @@ def write_output_excel(wb: Workbook, results: List[Dict[str, Any]], output_path:
     # Escribir los resultados
     for result in results:
         row_idx = result["row_index"]
-        
+
         # Escribir BOLETA como número entero (sin formato de miles)
         boleta_cell = ws.cell(row=row_idx, column=boleta_col, value=result["boleta"])
-        boleta_cell.number_format = '0'  # Formato de número sin decimales ni separadores
-        
+        boleta_cell.number_format = (
+            "0"  # Formato de número sin decimales ni separadores
+        )
+
         # Escribir DETALLE_ERRORES como texto
         ws.cell(row=row_idx, column=detalle_col, value=result["detalle_errores"])
 

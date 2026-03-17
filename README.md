@@ -25,6 +25,7 @@ Cada caso de uso vive en su propia carpeta. Ejemplos:
 
 - `bx-cnsr-finmg-billing/proforma-detailed/`
 - `bx-cnsr-finmg-billing-sale-transmission/create-sale-transmission/`
+- `bx-cnsr-finmg-biller/unitary/` – envío a SQS para biller-unitary (pruebas de estrés)
 - `bx-cnsr-soport-orders-consolidation/`
 
 Dentro de cada una:
@@ -84,6 +85,7 @@ MONGO_DATABASE=nombre-base-datos
 
 ```bash
 python ./bx-cnsr-finmg-billing/proforma-detailed/send_message.py
+python ./bx-cnsr-finmg-biller/unitary/send_message.py
 ```
 
 ### Scripts de base de datos

@@ -2,32 +2,29 @@
   {
     "society": "1700",
     "type": "order",
-    "siiFolio": "13756",
+    "siiFolio": "2217046801",
     "docType": 16,
-    "docClass": "YB",
-    "account": "44298540-1-85",
+    "account": "19749690-1-85",
     "costDetail": {
-      "amount": 720,
-      "taxableAmount": 607,
-      "tax": 115,
+      "amount": 5470,
+      "taxableAmount": 4601,
+      "tax": 874,
       "currency": "CLP",
-      "discount": {
-        "amount": 2
-      }
+      "discount": { "amount": 0 }
     },
     "prepaidEmission": {
-      "orderId": "1030166760",
+      "orderId": "2217046801",
       "paymentType": "EPP",
-      "transactionId": "7b30e84c-05a3-4d32-9c42-3fb6e3a741fa",
+      "transactionId": "2bf62f56-a343-4ade-ac3b-d0b409c94465",
       "method": "CA",
       "collector": "BLUE",
       "customerInfo": {
         "identifier": "66666666-6",
-        "name": "John Dwayne",
-        "address": "456 Side St 789"
+        "name": "elizabeth ortega",
+        "address": "Santo Domingo 1160"
       },
-      "amount": 607
+      "amount": 5470
     },
-    "emissionDate": "2026-01-28T00:00:00.000Z"
+    "emissionDate": "2026-02-25T00:00:00.000Z"
   }
 ]

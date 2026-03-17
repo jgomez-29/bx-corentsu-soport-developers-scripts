@@ -29,6 +29,23 @@ BOLETAS_REQUEST_ID = os.getenv("BOLETAS_REQUEST_ID", "")
 # Endpoint de la API (se construye con URL base + request ID)
 API_ENDPOINT = "/finmg/payment-process-massive/payment-documents/requests/"
 
+# Timeout por petición HTTP en segundos
+# Se puede sobreescribir con BOLETAS_API_TIMEOUT_SECONDS en .env
+API_TIMEOUT_SECONDS = int(os.getenv("BOLETAS_API_TIMEOUT_SECONDS", "30"))
+
+# Máximo de páginas a consultar para prevenir loops infinitos de paginación
+# Se puede sobreescribir con BOLETAS_API_MAX_PAGES en .env
+API_MAX_PAGES = int(os.getenv("BOLETAS_API_MAX_PAGES", "1000"))
+
+# Si es True, imprime dos líneas por página de API (solicitud + respuesta).
+# Si es False, imprime una sola línea resumida por página.
+API_VERBOSE_PAGE_LOG = os.getenv("BOLETAS_API_VERBOSE_PAGE_LOG", "false").lower() in (
+    "1",
+    "true",
+    "yes",
+    "y",
+)
+
 # ============================================================================
 # CONFIGURACIÓN: ARCHIVOS
 # ============================================================================

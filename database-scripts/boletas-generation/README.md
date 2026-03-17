@@ -39,7 +39,14 @@ boletas-generation/
 ```env
 BOLETAS_API_URL=http://localhost:3000
 BOLETAS_REQUEST_ID=YmF0Y2hfMTc3MDIxMTE2MTQzMl8yODZlODlkMC1mYTU3LTQ1ODctOGY5MS0zOTc5YzAyNGM0MWQ=
+BOLETAS_API_TIMEOUT_SECONDS=30
+BOLETAS_API_MAX_PAGES=1000
+BOLETAS_API_VERBOSE_PAGE_LOG=false
 ```
+
+`BOLETAS_API_TIMEOUT_SECONDS` es opcional y define el timeout por cada petición HTTP.
+`BOLETAS_API_MAX_PAGES` es opcional y evita loops infinitos de paginación.
+`BOLETAS_API_VERBOSE_PAGE_LOG` es opcional; en `false` muestra una línea por página, en `true` muestra solicitud y respuesta por separado.
 
 ## Uso
 
@@ -74,6 +81,11 @@ La API usa **paginación por cursor**. Cada respuesta tiene la forma:
 ```
 
 El script solicita automáticamente todas las páginas (enviando `cursor` en la siguiente petición) hasta que `hasMore` sea `false`, y concatena todos los documentos en una sola lista para el procesamiento.
+
+Durante la ejecución se imprimen logs por página para ver avance en procesos grandes:
+
+- `Página N: solicitando (cursor=...)`
+- `Página N: recibidos=X | acumulado=Y | has_more=true/false`
 
 Cada elemento de `data` es un documento con la siguiente estructura:
 

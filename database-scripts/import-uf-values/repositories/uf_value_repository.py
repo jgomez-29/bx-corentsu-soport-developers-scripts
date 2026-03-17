@@ -28,7 +28,7 @@ def find_existing_dates(collection, dates: List[datetime]) -> Set[str]:
         dates: Lista de fechas a verificar
 
     Returns:
-        Set de fechas existentes como strings ISO (para comparación rápida)
+        Set de fechas existentes como "YYYY-MM-DD" (para comparación sin depender de hora/timezone/ms)
     """
     if not dates:
         return set()
@@ -38,7 +38,7 @@ def find_existing_dates(collection, dates: List[datetime]) -> Set[str]:
         {"_id": 0, "date": 1},
     )
 
-    return {doc["date"].isoformat() for doc in cursor}
+    return {doc["date"].strftime("%Y-%m-%d") for doc in cursor}
 
 
 def bulk_insert(collection, documents: List[Dict[str, Any]]) -> int:
