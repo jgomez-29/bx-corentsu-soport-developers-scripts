@@ -1,0 +1,20 @@
+{
+    "orderId": "dev-order-test-001",
+    "sellerAccount": "dev-seller-account",
+    "owner": "dev-owner",
+    "packageId": "pkg-dev-001",
+    "trackingId": 9000001,
+    "eventDate": "2026-03-23T10:00:00.000Z",
+    "eventType": "created or modified",
+    "eventCode": "DL",
+    "location": "Santiago, Chile",
+    "status": "ACTIVE",
+    "agencyId": 1,
+    "geolocation": {
+        "coordinates": [
+            -33.4489,
+            -70.6693
+        ]
+    },
+    "creationDate": "2026-03-23T10:00:00.000Z"
+}
