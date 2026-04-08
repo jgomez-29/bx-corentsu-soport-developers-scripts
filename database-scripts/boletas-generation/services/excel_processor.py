@@ -51,6 +51,10 @@ def translate_error_message(error_msg: str) -> str:
     ):
         return "Error interno de SII: la boleta debe ser generada manualmente"
 
+    # Patrón: PROVIDER_FULL_ADDRESS_NOT_VALID
+    if error_msg == "PROVIDER_FULL_ADDRESS_NOT_VALID":
+        return "Error interno de SII: la boleta debe ser generada manualmente (formato de dirección no válido para SII)"
+
     # Patrón: PROVIDER_IDENTIFIER_FORMAT_NOT_VALID
     if error_msg == "PROVIDER_IDENTIFIER_FORMAT_NOT_VALID":
         return "Formato de RUT del proveedor inválido"

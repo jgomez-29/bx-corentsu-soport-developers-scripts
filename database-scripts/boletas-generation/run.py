@@ -348,10 +348,8 @@ def _print_results_summary(results: List[dict]) -> None:
                 continue
             key = result["detalle_errores"] or "SIN_DETALLE"
             error_breakdown[key] = error_breakdown.get(key, 0) + 1
-        top_errors = sorted(error_breakdown.items(), key=lambda x: x[1], reverse=True)[
-            :5
-        ]
-        print("  Top errores:")
+        top_errors = sorted(error_breakdown.items(), key=lambda x: x[1], reverse=True)
+        print("  Detalle errores:")
         for error_message, count in top_errors:
             print(f"    - {count}x {error_message}")
     print()
