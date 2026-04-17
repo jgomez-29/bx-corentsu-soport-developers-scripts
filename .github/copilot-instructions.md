@@ -109,7 +109,7 @@ El archivo se llama `send_message.py` por convención histórica; en realidad pu
 2. Cargar **`.env`** desde `repo_root / ".env"`: usar `load_dotenv(str(_env_file))` y, si las variables siguen vacías, cargar el archivo manualmente (líneas `KEY=VALUE` no comentadas).
 3. Cargar **config en dos niveles:** `config.py` (general) y `{ENVIRONMENT}/config.py` (dev o qa). Si la terminal es interactiva (`sys.stdin.isatty()`), preguntar: ambiente (dev/qa), destino (sqs/sns/both), cantidad de mensajes; si no, usar valores del config.
 4. Validar: si faltan `REGION` o `AWS_ACCOUNT_ID`, lanzar error indicando `.env` y ruta esperada. Si TARGET requiere cola/topic y no hay URL/ARN, error claro.
-5. Usar **solo valores de config** para `QUEUE_URL` y `TOPIC_ARN` (no override por variables de entorno).
+5. Usar **solo valores de config** para `QUEUE_URL` y `TOPIC_ RN` (no override por variables de entorno).
 6. Usar publicadores de `common.sqs` y `common.sns`; builder de envelopes desde `<entidad>_builder.py` del mismo directorio.
 
 ## 8. README y documentación

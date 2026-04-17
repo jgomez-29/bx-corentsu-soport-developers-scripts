@@ -4,3 +4,8 @@ __pycache__/
 .vscode/
 **/logs/
 **/output/
+
+.specify
+specs
+.github/agents
+.github/prompts
