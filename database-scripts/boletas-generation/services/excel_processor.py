@@ -261,9 +261,18 @@ def write_output_excel(wb: Workbook, results: List[Dict[str, Any]], output_path:
         detalle_col = ws.max_column + 1
         ws.cell(row=1, column=detalle_col, value="DETALLE_ERRORES")
 
+    # Buscar columna HES para forzarla como texto en el output
+    hes_col = find_hes_column(ws)
+
     # Escribir los resultados
     for result in results:
         row_idx = result["row_index"]
+
+        # Forzar columna HES como texto (evita que Excel muestre decimales o separadores de miles)
+        if hes_col is not None:
+            hes_cell = ws.cell(row=row_idx, column=hes_col)
+            hes_cell.value = str(result["hes_code"])
+            hes_cell.number_format = "@"
 
         # Escribir BOLETA como número entero (sin formato de miles)
         boleta_cell = ws.cell(row=row_idx, column=boleta_col, value=result["boleta"])
