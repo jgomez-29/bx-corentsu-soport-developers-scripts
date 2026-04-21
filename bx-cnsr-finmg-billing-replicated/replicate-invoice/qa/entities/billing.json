@@ -1,0 +1,37 @@
+{
+  "proformaSerie": null,
+  "account": "76032285-2-85",
+  "billingDate": null,
+  "publishDate": null,
+  "totalFreight": null,
+  "totalRetriesAmount": null,
+  "totalExtendedWarrantyAmount": null,
+  "totalAmount": null,
+  "totalOrders": null,
+  "startDate": null,
+  "endDate": null,
+  "deliveryStatus": null,
+  "orderStatus": null,
+  "userPublisher": null,
+  "billingRequestId": "2e4a9c94-e82d-4e69-affb-5216836a030e",
+  "step": "REPLICATE_INVOICE",
+  "nextStep": null,
+  "siiFolio": null,
+  "orderDetails": null,
+  "billingData": {
+    "identifier": "2256689610",
+    "identifierType": "order",
+    "billingType": "16",
+    "rut": "66666666-6",
+    "name": "Angela  González",
+    "billingSociety": "1700",
+    "siiFolio": "14866",
+    "aceptaDocumentUrl": "http://pruebaswindte2604.acepta.com/ca4webv3/PdfView?url=http://pruebaswindte2604.acepta.com/v01/84C9BB8AD6B4BEF1F5BAB7D17F9B1DD6DEE0CE65?k=38ad1302cac4118a8214cc37b6d42555",
+    "amount": 2635,
+    "totalToPay": 2635,
+    "sendTo": {
+      "to": ["kevin.lorca@blue.cl"],
+      "cc": null
+    }
+  }
+}

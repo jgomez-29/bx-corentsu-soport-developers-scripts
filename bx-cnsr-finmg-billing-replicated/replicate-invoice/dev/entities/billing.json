@@ -1,0 +1,37 @@
+{
+  "proformaSerie": null,
+  "account": "18841006-1-85",
+  "billingDate": null,
+  "publishDate": null,
+  "totalFreight": null,
+  "totalRetriesAmount": null,
+  "totalExtendedWarrantyAmount": null,
+  "totalAmount": null,
+  "totalOrders": null,
+  "startDate": null,
+  "endDate": null,
+  "deliveryStatus": null,
+  "orderStatus": null,
+  "userPublisher": null,
+  "billingRequestId": "fa776979-356f-4951-9922-3e3f5104b67c",
+  "step": "REPLICATE_INVOICE",
+  "nextStep": null,
+  "siiFolio": null,
+  "orderDetails": null,
+  "billingData": {
+    "identifier": "1034257044",
+    "identifierType": "order",
+    "billingType": "16",
+    "rut": "18841006-5",
+    "name": "Tiare Morales",
+    "billingSociety": "1700",
+    "siiFolio": "14813",
+    "aceptaDocumentUrl": "http://pruebaswindte2604.acepta.com/ca4webv3/PdfView?url=http://pruebaswindte2604.acepta.com/v01/8A9E3ED3AB5DB73B321FE4D51244CD83C4038D4E?k=1ff0985ff9994d5596eece524fa4cb7d",
+    "amount": 0.0,
+    "totalToPay": 0.0,
+    "sendTo": {
+      "to": ["f.carvesp@gmail.com"],
+      "cc": null
+    }
+  }
+}
