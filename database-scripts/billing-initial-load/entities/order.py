@@ -81,6 +81,19 @@ def _to_iso_str(value) -> str | None:
     return str(value)
 
 
+def _to_datetime(value) -> datetime | None:
+    """Convierte ISO string o datetime a datetime con timezone UTC para almacenar como Date en MongoDB."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
 def build_billing(order: dict, proforma_doc: dict | None, oser_data: dict) -> dict:
     """
     Construye el dict de billing para actualizar orders.billing.
@@ -168,9 +181,9 @@ def build_proforma(proforma_data: dict, account: str, sii_folio: str, dcbt_nmr_f
         },
         "companyName": company_name,
         "siiFolio": sii_folio,
-        "createdAt": created_at_iso,
-        "updatedAt": updated_at_iso,
-        "publishedAt": updated_at_iso,
+        "createdAt": _to_datetime(created_at_iso),
+        "updatedAt": _to_datetime(updated_at_iso),
+        "publishedAt": _to_datetime(updated_at_iso),
         "closingGroupCodes": [],
         "requestId": str(uuid.uuid4()),
         "createdBy": None,
@@ -187,7 +200,7 @@ def build_proforma_request(proforma_doc: dict, order_id: str) -> dict:
     createdBy = "billing-initial-load" (distinto del consumer Java).
     """
     from datetime import timezone
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
     order_count = proforma_doc.get("orderCount") or 0
 
     return {
@@ -195,8 +208,8 @@ def build_proforma_request(proforma_doc: dict, order_id: str) -> dict:
         "filters": {"orderId": order_id},
         "type": "LEGACY",
         "createdBy": "billing-initial-load",
-        "createdAt": now_iso,
-        "updatedAt": now_iso,
+        "createdAt": now,
+        "updatedAt": now,
         "elementsToProcess": order_count,
         "elementsSentToProcess": order_count,
         "elementsProcessed": order_count,
