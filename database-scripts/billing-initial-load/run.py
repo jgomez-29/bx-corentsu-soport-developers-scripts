@@ -311,15 +311,21 @@ def main():
 
             for day_idx, (day_start, day_end) in enumerate(days, 1):
                 day_label = day_start.strftime("%Y-%m-%d")
-                print(f"\n[Día {day_idx}/{total_days}] {day_label} → {day_end.strftime('%Y-%m-%d')}")
+                day_pct = day_idx / total_days * 100
+                print(f"\n[Día {day_idx}/{total_days}] ({day_pct:.0f}%) {day_label} → {day_end.strftime('%Y-%m-%d')}")
 
                 orders_col = mongo_db[ORDERS_COLLECTION]
+
+                day_filter = {
+                    "emissionDate": {"$gte": day_start, "$lt": day_end},
+                    "taxDocument": {"$exists": True, "$ne": None},
+                    "billing.status": {"$ne": "BILLED"},
+                }
+                day_total = orders_col.count_documents(day_filter)
+                print(f"  OS candidatas del día : {day_total}")
+
                 cursor = orders_col.find(
-                    {
-                        "emissionDate": {"$gte": day_start, "$lt": day_end},
-                        "taxDocument": {"$exists": True, "$ne": None},
-                        "billing.status": {"$ne": "BILLED"},
-                    },
+                    day_filter,
                     {
                         "orderId": 1,
                         "emissionDate": 1,
@@ -374,8 +380,9 @@ def main():
                         elapsed = time.monotonic() - start_time
                         rate = stats["updated_with_proforma"] + stats["updated_without_proforma"]
                         rate_per_s = rate / elapsed if elapsed > 0 else 0
+                        day_progress_pct = day_processed / day_total * 100 if day_total > 0 else 0
                         print(
-                            f"  Lote {batch_num} | {day_processed} OS | "
+                            f"  Lote {batch_num} | {day_processed}/{day_total} OS ({day_progress_pct:.0f}%) | "
                             f"{day_updated} actualizadas | {day_errors} errores | "
                             f"{rate_per_s:.1f} OS/s"
                         )
@@ -405,8 +412,9 @@ def main():
                         all_results.extend(batch_results)
                         day_updated += sum(1 for r in batch_results if r["status"] in ("UPDATED", "UPDATED_WITHOUT_PROFORMA", "DRY_RUN"))
 
+                day_progress_pct = day_processed / day_total * 100 if day_total > 0 else 0
                 limit_note = f" (límite DRY_RUN {config.DRY_RUN_LIMIT})" if day_limit_reached else ""
-                print(f"  → {day_processed} OS procesadas | {day_updated} actualizadas{limit_note}")
+                print(f"  → {day_processed}/{day_total} OS procesadas ({day_progress_pct:.0f}%) | {day_updated} actualizadas{limit_note}")
                 stats["days"] += 1
 
     elapsed = time.monotonic() - start_time
