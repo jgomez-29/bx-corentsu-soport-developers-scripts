@@ -6,6 +6,7 @@ Genera una carpeta con el nombre del log dentro de logs/ y deposita ahí:
   - sii_folios.txt        → siiFolios únicos, ordenados
   - accounts.txt          → cuentas únicas, ordenadas
   - dcbt_nmr_fac_pf.txt   → números de proforma Oracle únicos, ordenados
+  - order_ids.json        → array con todos los orderIds procesados
 
 Uso:
     python ./database-scripts/billing-initial-load/extract_log.py
@@ -60,6 +61,7 @@ def extract(log_file: Path):
     sii_folios = set()
     accounts = set()
     dcbt_numbers = set()
+    order_ids = []
 
     for entry in results:
         billing = entry.get("billing_applied") or {}
@@ -80,6 +82,10 @@ def extract(log_file: Path):
         if dcbt:
             dcbt_numbers.add(str(dcbt))
 
+        order_id = entry.get("orderId")
+        if order_id:
+            order_ids.append(str(order_id))
+
     # Carpeta de salida: logs/<stem del log>/
     out_dir = log_file.parent / log_file.stem
     out_dir.mkdir(exist_ok=True)
@@ -94,11 +100,17 @@ def extract(log_file: Path):
     for filename, values in files.items():
         (out_dir / filename).write_text("\n".join(values), encoding="utf-8")
 
+    (out_dir / "order_ids.json").write_text(
+        json.dumps(order_ids, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
     print(f"\n  Carpeta de salida: logs/{log_file.stem}/")
     print(f"  proformaSeries únicas  : {len(proforma_series):>6}  →  proforma_series.txt")
     print(f"  siiFolios únicos       : {len(sii_folios):>6}  →  sii_folios.txt")
     print(f"  Cuentas únicas         : {len(accounts):>6}  →  accounts.txt")
     print(f"  DCBT NMR FAC PF únicos : {len(dcbt_numbers):>6}  →  dcbt_nmr_fac_pf.txt")
+    print(f"  OrderIds               : {len(order_ids):>6}  →  order_ids.json")
     print()
 
 

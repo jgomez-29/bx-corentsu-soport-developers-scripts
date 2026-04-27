@@ -34,8 +34,18 @@ ORACLE_PASSWORD = os.getenv("ORACLE_PASSWORD", "")
 START_DATE = ""   # Formato: YYYY-MM-DD
 END_DATE = ""     # Formato: YYYY-MM-DD
 
+# Ruta al archivo de texto con las cuentas a procesar (una por línea).
+# Ruta relativa a la carpeta del script o absoluta.
+# Vacío = se solicita interactivamente.
+ACCOUNTS_FILE = "accounts/cuentas.txt"  # Ejemplo: "accounts/cuentas.txt"
+
 # Tamaño del lote de OS a procesar por iteración del cursor
 BATCH_SIZE = 1000
+
+# Cantidad de cuentas por lote en la query MongoDB.
+# Con muchas cuentas en ACCOUNTS_FILTER, dividir en lotes reduce
+# el tamaño de cada query y el uso de recursos en la base de datos.
+ACCOUNT_BATCH_SIZE = 500
 
 # ============================================================================
 # CONFIGURACIÓN: DRY_RUN

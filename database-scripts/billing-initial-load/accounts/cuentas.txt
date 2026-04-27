@@ -1,0 +1,6 @@
+# Cuentas a facturar — una por línea
+# Las líneas que comienzan con # y las líneas vacías son ignoradas
+#
+# Ejemplo:
+# 96801150-11-8
+# 76543210-9

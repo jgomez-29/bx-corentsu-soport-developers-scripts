@@ -37,11 +37,11 @@ sys.path.insert(0, str(script_dir))
 _env_file = repo_root / ".env"
 try:
     from dotenv import load_dotenv
-    load_dotenv(str(_env_file))
+    load_dotenv(str(_env_file), override=True)
 except ImportError:
     pass
 
-if _env_file.exists() and (not os.environ.get("MONGO_URI") or not os.environ.get("ORACLE_DSN")):
+if _env_file.exists():
     with open(_env_file, encoding="utf-8") as _f:
         for _line in _f:
             _line = _line.strip()
@@ -92,6 +92,49 @@ def prompt_int(message: str, default: int, min_val: int = 0) -> int:
             print("  Ingresa un número entero.")
 
 
+def load_accounts_from_file(file_path: str) -> list:
+    """
+    Lee las cuentas desde un archivo de texto.
+
+    Formato esperado: una cuenta por línea.
+    Las líneas que comienzan con # y las líneas vacías se ignoran.
+
+    Args:
+        file_path: Ruta al archivo (absoluta o relativa a la carpeta del script).
+
+    Returns:
+        Lista de strings con las cuentas encontradas.
+
+    Raises:
+        FileNotFoundError: Si el archivo no existe.
+        ValueError: Si el archivo no contiene ninguna cuenta válida.
+    """
+    path = Path(file_path)
+    if not path.is_absolute():
+        path = script_dir / file_path
+
+    if not path.exists():
+        raise FileNotFoundError(
+            f"No se encontró el archivo de cuentas: {path}\n"
+            f"  Crea el archivo con una cuenta por línea (# para comentarios)."
+        )
+
+    accounts = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                accounts.append(line)
+
+    if not accounts:
+        raise ValueError(
+            f"El archivo de cuentas no contiene cuentas válidas: {path}\n"
+            f"  Agrega al menos una cuenta (una por línea)."
+        )
+
+    return accounts
+
+
 def prompt_date(message: str, default: str) -> str:
     while True:
         display = default if default else "YYYY-MM-DD"
@@ -108,6 +151,12 @@ def prompt_date(message: str, default: str) -> str:
 # ============================================================================
 # FUNCIONES DE UTILIDAD
 # ============================================================================
+
+
+def chunks(lst: list, size: int):
+    """Divide una lista en sublistas de hasta `size` elementos."""
+    for i in range(0, len(lst), size):
+        yield lst[i: i + size]
 
 
 def resolve_path(relative_path: str) -> Path:
@@ -150,6 +199,23 @@ def collect_user_input():
         config.START_DATE = prompt_date("¿Fecha de inicio? (YYYY-MM-DD)", config.START_DATE or "")
         config.END_DATE = prompt_date("¿Fecha de término? (YYYY-MM-DD)", config.END_DATE or "")
 
+    # ── Archivo de accounts ───────────────────────────────────────────────────
+    if config.ACCOUNTS_FILE and interactive:
+        print(f"  Archivo de cuentas configurado: {config.ACCOUNTS_FILE}")
+        use_configured_file = prompt_yes_no("¿Usar el archivo de cuentas configurado?", True)
+        if not use_configured_file:
+            config.ACCOUNTS_FILE = input("Ruta al archivo de cuentas: ").strip()
+    else:
+        default_file = config.ACCOUNTS_FILE or ""
+        display = default_file if default_file else "accounts/cuentas.txt"
+        resp = input(f"Ruta al archivo de cuentas [{display}]: ").strip()
+        if resp:
+            config.ACCOUNTS_FILE = resp
+        elif not config.ACCOUNTS_FILE:
+            config.ACCOUNTS_FILE = resp
+
+    config.ACCOUNTS_FILTER = load_accounts_from_file(config.ACCOUNTS_FILE)
+
     # ── DRY_RUN (solo si terminal interactiva) ────────────────────────────────
     if interactive:
         config.DRY_RUN = prompt_yes_no("¿Activar modo DRY_RUN?", config.DRY_RUN)
@@ -171,6 +237,13 @@ def validate_config():
                 f"{var} no está definida. Agrégala en el archivo .env de la raíz del repo.\n"
                 f"  Ruta esperada: {repo_root / '.env'}"
             )
+    if not config.ACCOUNTS_FILE:
+        raise ValueError(
+            "ACCOUNTS_FILE no está definida. Ingresa la ruta al archivo de cuentas.\n"
+            f"  Ejemplo: accounts/cuentas.txt (relativo a {script_dir})"
+        )
+    if not config.ACCOUNTS_FILTER:
+        raise ValueError("El archivo de cuentas no contiene cuentas válidas.")
     if not config.START_DATE:
         raise ValueError("START_DATE no está definida. Ingresa una fecha de inicio (YYYY-MM-DD).")
     if not config.END_DATE:
@@ -193,6 +266,10 @@ def print_initial_summary(total_days: int):
     if config.DRY_RUN and config.DRY_RUN_LIMIT > 0:
         print(f"  Límite/día    : {config.DRY_RUN_LIMIT} registros")
     print(f"  Tamaño lote   : {config.BATCH_SIZE} OS")
+    if config.ACCOUNTS_FILTER:
+        print(f"  Cuentas       : {len(config.ACCOUNTS_FILTER)} ({config.ACCOUNTS_FILE})")
+    else:
+        print(f"  Accounts      : todas")
     _uri_safe = ("...@" + config.MONGO_URI.split("@")[-1] if "@" in config.MONGO_URI else config.MONGO_URI)
     print(f"  MongoDB       : {_uri_safe} / {config.MONGO_DATABASE}")
     print(f"  Oracle DSN    : {config.ORACLE_DSN}")
@@ -251,6 +328,7 @@ def save_log(stats: dict, all_results: list, elapsed: float):
         "elapsed_seconds": round(elapsed, 2),
         "dry_run": config.DRY_RUN,
         "date_range": {"from": config.START_DATE, "to": config.END_DATE},
+        "accounts_filter": {"file": config.ACCOUNTS_FILE, "accounts": config.ACCOUNTS_FILTER},
         "summary": {
             "days_processed": stats["days"],
             "total_candidates": stats["total_candidates"],
@@ -316,26 +394,25 @@ def main():
 
                 orders_col = mongo_db[ORDERS_COLLECTION]
 
-                day_filter = {
+                base_filter = {
                     "emissionDate": {"$gte": day_start, "$lt": day_end},
                     "taxDocument": {"$exists": True, "$ne": None},
                     "billing.status": {"$ne": "BILLED"},
+                    "seller.account": {"$in": config.ACCOUNTS_FILTER},
                 }
-                day_total = orders_col.count_documents(day_filter)
+                day_total = orders_col.count_documents(base_filter)
+                account_batches = list(chunks(config.ACCOUNTS_FILTER, config.ACCOUNT_BATCH_SIZE))
                 print(f"  OS candidatas del día : {day_total}")
+                print(f"  Lotes de cuentas      : {len(account_batches)} ({config.ACCOUNT_BATCH_SIZE} cuentas/lote)")
 
-                cursor = orders_col.find(
-                    day_filter,
-                    {
-                        "orderId": 1,
-                        "emissionDate": 1,
-                        "referenceOrder": 1,
-                        "seller.account": 1,
-                        "taxDocument": 1,
-                        "billing": 1,
-                    },
-                    batch_size=config.BATCH_SIZE,
-                )
+                projection = {
+                    "orderId": 1,
+                    "emissionDate": 1,
+                    "referenceOrder": 1,
+                    "seller.account": 1,
+                    "taxDocument": 1,
+                    "billing": 1,
+                }
 
                 batch = []
                 day_processed = 0
@@ -344,51 +421,65 @@ def main():
                 batch_num = 0
                 day_limit_reached = False
 
-                for doc in cursor:
-                    if config.DRY_RUN and config.DRY_RUN_LIMIT > 0:
-                        if day_processed >= config.DRY_RUN_LIMIT:
-                            day_limit_reached = True
-                            break
+                for acc_batch in account_batches:
+                    if day_limit_reached:
+                        break
 
-                    batch.append(doc)
-                    day_processed += 1
+                    acc_filter = {**base_filter, "seller.account": {"$in": acc_batch}}
+                    cursor = orders_col.find(acc_filter, projection, batch_size=config.BATCH_SIZE).hint([
+                        ("seller.account", 1),
+                        ("emissionDate", 1),
+                        ("billing.deliveryDate", 1),
+                        ("billing.proformaId", 1),
+                        ("state", 1),
+                        ("_id", 1),
+                    ])
 
-                    if len(batch) >= config.BATCH_SIZE:
-                        batch_num += 1
-                        try:
-                            batch_results = billing_service.process_batch(
-                                batch, mongo_db, oracle_conn, config.DRY_RUN
+                    for doc in cursor:
+                        if config.DRY_RUN and config.DRY_RUN_LIMIT > 0:
+                            if day_processed >= config.DRY_RUN_LIMIT:
+                                day_limit_reached = True
+                                break
+
+                        batch.append(doc)
+                        day_processed += 1
+
+                        if len(batch) >= config.BATCH_SIZE:
+                            batch_num += 1
+                            try:
+                                batch_results = billing_service.process_batch(
+                                    batch, mongo_db, oracle_conn, config.DRY_RUN
+                                )
+                            except Exception as e:
+                                print(f"  [ERROR] Lote {batch_num}: {e}")
+                                for order in batch:
+                                    all_results.append({
+                                        "orderId": order.get("orderId", ""),
+                                        "status": "ERROR",
+                                        "reason": str(e),
+                                    })
+                                stats["errors"] += len(batch)
+                                day_errors += len(batch)
+                                batch = []
+                                continue
+
+                            _accumulate(stats, batch_results)
+                            all_results.extend(batch_results)
+                            day_updated += sum(1 for r in batch_results if r["status"] in ("UPDATED", "UPDATED_WITHOUT_PROFORMA", "DRY_RUN"))
+                            day_errors += sum(1 for r in batch_results if r["status"] == "ERROR")
+
+                            elapsed = time.monotonic() - start_time
+                            rate = stats["updated_with_proforma"] + stats["updated_without_proforma"]
+                            rate_per_s = rate / elapsed if elapsed > 0 else 0
+                            day_progress_pct = day_processed / day_total * 100 if day_total > 0 else 0
+                            print(
+                                f"  Lote {batch_num} | {day_processed}/{day_total} OS ({day_progress_pct:.0f}%) | "
+                                f"{day_updated} actualizadas | {day_errors} errores | "
+                                f"{rate_per_s:.1f} OS/s"
                             )
-                        except Exception as e:
-                            print(f"  [ERROR] Lote {batch_num}: {e}")
-                            for order in batch:
-                                all_results.append({
-                                    "orderId": order.get("orderId", ""),
-                                    "status": "ERROR",
-                                    "reason": str(e),
-                                })
-                            stats["errors"] += len(batch)
-                            day_errors += len(batch)
                             batch = []
-                            continue
 
-                        _accumulate(stats, batch_results)
-                        all_results.extend(batch_results)
-                        day_updated += sum(1 for r in batch_results if r["status"] in ("UPDATED", "UPDATED_WITHOUT_PROFORMA", "DRY_RUN"))
-                        day_errors += sum(1 for r in batch_results if r["status"] == "ERROR")
-
-                        elapsed = time.monotonic() - start_time
-                        rate = stats["updated_with_proforma"] + stats["updated_without_proforma"]
-                        rate_per_s = rate / elapsed if elapsed > 0 else 0
-                        day_progress_pct = day_processed / day_total * 100 if day_total > 0 else 0
-                        print(
-                            f"  Lote {batch_num} | {day_processed}/{day_total} OS ({day_progress_pct:.0f}%) | "
-                            f"{day_updated} actualizadas | {day_errors} errores | "
-                            f"{rate_per_s:.1f} OS/s"
-                        )
-                        batch = []
-
-                # Procesar el lote restante del día
+                # Procesar el lote restante del día (acumulado entre todos los lotes de cuentas)
                 if batch:
                     batch_num += 1
                     try:
