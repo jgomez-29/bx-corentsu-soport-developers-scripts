@@ -8,6 +8,8 @@ Operaciones:
   - save_many:                 inserción bulk de nuevas invoices
 """
 
+import query_logger
+
 COLLECTION_NAME = "invoices"
 
 
@@ -31,6 +33,7 @@ def find_existing_sii_folios(collection, sii_folios: list) -> set:
     if not clean:
         return set()
 
+    query_logger.log_mongo(COLLECTION_NAME, "find", {"siiFolio": {"$in": clean}}, {"siiFolio": 1, "_id": 0})
     docs = collection.find(
         {"siiFolio": {"$in": clean}},
         {"siiFolio": 1, "_id": 0},
@@ -54,5 +57,6 @@ def save_many(collection, invoice_docs: list) -> int:
     if not invoice_docs:
         return 0
 
+    query_logger.log_mongo(COLLECTION_NAME, f"insert_many ({len(invoice_docs)} docs)")
     result = collection.insert_many(invoice_docs, ordered=False)
     return len(result.inserted_ids)

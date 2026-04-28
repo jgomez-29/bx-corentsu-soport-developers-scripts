@@ -94,6 +94,32 @@ def _to_datetime(value) -> datetime | None:
         return None
 
 
+def build_billing_legacy(order: dict, proforma_doc: dict | None) -> dict:
+    """
+    Construye el dict de billing para el modo legacy.
+
+    En el modo legacy no hay taxDocument en la orden; la factura proviene de Oracle.
+    Por eso no se incluyen siiFolio, billingDate ni detail (se añadirán cuando
+    se implemente la lógica de invoices del modo legacy).
+
+    Campos siempre presentes: status.
+    Campos condicionales (solo si proforma_doc): proformaId, proformaSerie.
+
+    Args:
+        order:        Documento de la OS desde MongoDB.
+        proforma_doc: Documento de proforma resuelto (o None si no hay).
+    """
+    billing = {
+        "status": "BILLED",
+    }
+
+    if proforma_doc:
+        billing["proformaId"] = proforma_doc.get("_id_hex")
+        billing["proformaSerie"] = proforma_doc.get("proformaSerie")
+
+    return billing
+
+
 def build_billing(order: dict, proforma_doc: dict | None, oser_data: dict) -> dict:
     """
     Construye el dict de billing para actualizar orders.billing.

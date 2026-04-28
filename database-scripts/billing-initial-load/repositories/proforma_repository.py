@@ -8,6 +8,8 @@ Operaciones:
   - save:              inserción de una nueva proforma legacy
 """
 
+import query_logger
+
 COLLECTION_NAME = "proformas"
 
 
@@ -40,6 +42,7 @@ def find_by_accounts(collection, accounts: list) -> list:
         "proformaSerie": 1,
         "serviceCharges": 1,
     }
+    query_logger.log_mongo(COLLECTION_NAME, "find", {"account": {"$in": clean}}, projection)
     return list(collection.find({"account": {"$in": clean}}, projection))
 
 
@@ -54,5 +57,6 @@ def save(collection, proforma_doc: dict) -> str:
     Returns:
         Hex string del ObjectId insertado.
     """
+    query_logger.log_mongo(COLLECTION_NAME, "insert_one", {"account": proforma_doc.get("account"), "proformaSerie": proforma_doc.get("proformaSerie")})
     result = collection.insert_one(proforma_doc)
     return str(result.inserted_id)

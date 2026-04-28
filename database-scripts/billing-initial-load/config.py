@@ -31,8 +31,8 @@ ORACLE_PASSWORD = os.getenv("ORACLE_PASSWORD", "")
 # ============================================================================
 
 # Fechas por defecto (solo usadas si stdin no es interactivo)
-START_DATE = ""   # Formato: YYYY-MM-DD
-END_DATE = ""     # Formato: YYYY-MM-DD
+START_DATE = "2026-03-01"   # Formato: YYYY-MM-DD
+END_DATE = "2026-04-01"     # Formato: YYYY-MM-DD
 
 # Ruta al archivo de texto con las cuentas a procesar (una por línea).
 # Ruta relativa a la carpeta del script o absoluta.
@@ -64,3 +64,11 @@ DRY_RUN_LIMIT = 100
 # ============================================================================
 
 LOGS_DIR = "./logs"
+
+# ============================================================================
+# CONFIGURACIÓN: QUERY LOGGING
+# ============================================================================
+
+# Si es True, imprime en consola cada query Oracle y MongoDB antes de ejecutarla.
+# Útil para depuración. No activar en producción con volúmenes grandes.
+QUERY_LOGGING = False

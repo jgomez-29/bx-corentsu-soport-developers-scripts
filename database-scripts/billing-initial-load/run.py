@@ -51,6 +51,7 @@ import config
 # Agregar nuevos modos aquí: "nombre": "modes.nombre_modulo"
 MODES = {
     "taxDocument": "modes.tax_document",
+    "legacy": "modes.legacy",
 }
 
 
