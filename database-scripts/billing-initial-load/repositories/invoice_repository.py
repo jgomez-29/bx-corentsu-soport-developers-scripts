@@ -13,15 +13,16 @@ import query_logger
 COLLECTION_NAME = "invoices"
 
 
-def find_existing_sii_folios(collection, sii_folios: list) -> set:
+def find_existing_sii_folios(collection, sii_folios: list, invoice_type: str = None) -> set:
     """
     Retorna el conjunto de siiFolios que ya existen en la colección.
 
     Usado para evitar duplicados al crear invoices dentro de un lote.
 
     Args:
-        collection: Colección pymongo de invoices.
-        sii_folios: Lista de siiFolios del lote actual.
+        collection:   Colección pymongo de invoices.
+        sii_folios:   Lista de siiFolios del lote actual.
+        invoice_type: Si se especifica, filtra además por el campo 'type' del documento.
 
     Returns:
         Set de strings con los siiFolios ya presentes.
@@ -33,11 +34,12 @@ def find_existing_sii_folios(collection, sii_folios: list) -> set:
     if not clean:
         return set()
 
-    query_logger.log_mongo(COLLECTION_NAME, "find", {"siiFolio": {"$in": clean}}, {"siiFolio": 1, "_id": 0})
-    docs = collection.find(
-        {"siiFolio": {"$in": clean}},
-        {"siiFolio": 1, "_id": 0},
-    )
+    query_filter = {"siiFolio": {"$in": clean}}
+    if invoice_type is not None:
+        query_filter["type"] = invoice_type
+
+    query_logger.log_mongo(COLLECTION_NAME, "find", query_filter, {"siiFolio": 1, "_id": 0})
+    docs = collection.find(query_filter, {"siiFolio": 1, "_id": 0})
     return {doc["siiFolio"] for doc in docs}
 
 

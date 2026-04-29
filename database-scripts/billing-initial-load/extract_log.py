@@ -2,11 +2,12 @@
 Utilidad: extrae datos desde un log de billing-initial-load.
 
 Genera una carpeta con el nombre del log dentro de logs/ y deposita ahí:
-  - proforma_series.txt   → proformaSeries únicas, ordenadas
-  - sii_folios.txt        → siiFolios únicos, ordenados
-  - accounts.txt          → cuentas únicas, ordenadas
-  - dcbt_nmr_fac_pf.txt   → números de proforma Oracle únicos, ordenados
-  - order_ids.json        → array con todos los orderIds procesados
+  - proforma_series.txt      → proformaSeries únicas, ordenadas
+  - sii_folios.txt           → siiFolios únicos, ordenados
+  - accounts.txt             → cuentas únicas, ordenadas
+  - dcbt_nmr_fac_pf.txt      → números de proforma Oracle únicos, ordenados
+  - dcbt_nmr_fac_real.txt    → números de factura real Oracle únicos, ordenados
+  - order_ids.json           → array con todos los orderIds procesados
 
 Uso:
     python ./database-scripts/billing-initial-load/extract_log.py
@@ -61,6 +62,7 @@ def extract(log_file: Path):
     sii_folios = set()
     accounts = set()
     dcbt_numbers = set()
+    dcbt_real_numbers = set()
     order_ids = []
 
     for entry in results:
@@ -82,6 +84,10 @@ def extract(log_file: Path):
         if dcbt:
             dcbt_numbers.add(str(dcbt))
 
+        dcbt_real = entry.get("dcbt_nmr_fac_real")
+        if dcbt_real:
+            dcbt_real_numbers.add(str(dcbt_real))
+
         order_id = entry.get("orderId")
         if order_id:
             order_ids.append(str(order_id))
@@ -91,10 +97,11 @@ def extract(log_file: Path):
     out_dir.mkdir(exist_ok=True)
 
     files = {
-        "proforma_series.txt": sorted(proforma_series),
-        "sii_folios.txt":      sorted(sii_folios),
-        "accounts.txt":        sorted(accounts),
-        "dcbt_nmr_fac_pf.txt": sorted(dcbt_numbers),
+        "proforma_series.txt":   sorted(proforma_series),
+        "sii_folios.txt":        sorted(sii_folios),
+        "accounts.txt":          sorted(accounts),
+        "dcbt_nmr_fac_pf.txt":   sorted(dcbt_numbers),
+        "dcbt_nmr_fac_real.txt": sorted(dcbt_real_numbers),
     }
 
     for filename, values in files.items():
@@ -110,6 +117,7 @@ def extract(log_file: Path):
     print(f"  siiFolios únicos       : {len(sii_folios):>6}  →  sii_folios.txt")
     print(f"  Cuentas únicas         : {len(accounts):>6}  →  accounts.txt")
     print(f"  DCBT NMR FAC PF únicos : {len(dcbt_numbers):>6}  →  dcbt_nmr_fac_pf.txt")
+    print(f"  DCBT NMR FAC REAL únicos:{len(dcbt_real_numbers):>5}  →  dcbt_nmr_fac_real.txt")
     print(f"  OrderIds               : {len(order_ids):>6}  →  order_ids.json")
     print()
 

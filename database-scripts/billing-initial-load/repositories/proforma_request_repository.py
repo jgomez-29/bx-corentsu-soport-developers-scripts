@@ -22,3 +22,17 @@ def save(collection, request_doc: dict) -> None:
     """
     query_logger.log_mongo(COLLECTION_NAME, "insert_one", {"requestId": request_doc.get("requestId")})
     collection.insert_one(request_doc)
+
+
+def save_many(collection, request_docs: list) -> None:
+    """
+    Inserta múltiples proformaRequests en una sola operación.
+
+    Args:
+        collection:    Colección pymongo de proformaRequests.
+        request_docs:  Lista de documentos construidos con build_proforma_request().
+    """
+    if not request_docs:
+        return
+    query_logger.log_mongo(COLLECTION_NAME, "insert_many", {"count": len(request_docs)})
+    collection.insert_many(request_docs, ordered=False)

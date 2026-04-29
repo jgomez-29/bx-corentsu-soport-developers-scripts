@@ -41,6 +41,8 @@ def find_by_accounts(collection, accounts: list) -> list:
         "account": 1,
         "proformaSerie": 1,
         "serviceCharges": 1,
+        "siiFolio": 1,
+        "createdAt": 1,
     }
     query_logger.log_mongo(COLLECTION_NAME, "find", {"account": {"$in": clean}}, projection)
     return list(collection.find({"account": {"$in": clean}}, projection))
@@ -60,3 +62,23 @@ def save(collection, proforma_doc: dict) -> str:
     query_logger.log_mongo(COLLECTION_NAME, "insert_one", {"account": proforma_doc.get("account"), "proformaSerie": proforma_doc.get("proformaSerie")})
     result = collection.insert_one(proforma_doc)
     return str(result.inserted_id)
+
+
+def save_many(collection, proforma_docs: list) -> list:
+    """
+    Inserta múltiples proformas en una sola operación y retorna sus _id hex strings.
+
+    El orden de los IDs retornados corresponde al orden de la lista de entrada.
+
+    Args:
+        collection:    Colección pymongo de proformas.
+        proforma_docs: Lista de documentos construidos con build_proforma().
+
+    Returns:
+        Lista de hex strings de los ObjectIds insertados (mismo orden que la entrada).
+    """
+    if not proforma_docs:
+        return []
+    query_logger.log_mongo(COLLECTION_NAME, "insert_many", {"count": len(proforma_docs)})
+    result = collection.insert_many(proforma_docs, ordered=False)
+    return [str(oid) for oid in result.inserted_ids]

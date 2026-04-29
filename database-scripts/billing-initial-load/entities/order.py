@@ -244,7 +244,83 @@ def build_proforma_request(proforma_doc: dict, order_id: str) -> dict:
     }
 
 
-def build_invoice(order: dict, proforma_doc: dict | None) -> dict:
+def build_invoice_legacy(
+    sii_folio: str,
+    sii_document_path: str | None,
+    account: str,
+    proforma_doc: dict | None,
+) -> dict:
+    """
+    Construye el documento para insertar en la colección invoices (modo legacy).
+
+    A diferencia de build_invoice(), no depende de taxDocument. Los datos de
+    identificación de la factura provienen de Oracle (OAPV/DEMV).
+
+    Colección: invoices
+    type: "12" (Factura Electrónica — fijo para el modo legacy)
+    receiver: None (pendiente de implementación futura)
+
+    Args:
+        sii_folio:         Folio SII (OAPV_VALOR de Oracle).
+        sii_document_path: Ruta del documento SII (DEMV_RUTA_WEB de Oracle).
+        account:           Cuenta del vendedor.
+        proforma_doc:      Documento de proforma resuelto (o None si no hay).
+    """
+    service_charges_total = 0
+    document_date = None
+
+    if proforma_doc:
+        service_charges_total = (proforma_doc.get("serviceCharges") or {}).get("total", 0)
+        document_date = _to_datetime(proforma_doc.get("createdAt"))
+
+    if proforma_doc:
+        related_elements = [
+            {"identifier": proforma_doc.get("proformaSerie", ""), "type": "proforma_serie"}
+        ]
+    else:
+        related_elements = []
+
+    tax_rate = 19
+    tax_amount = round(service_charges_total * tax_rate / 100)
+    total = service_charges_total + tax_amount
+
+    return {
+        "siiFolio": sii_folio,
+        "type": "12",
+        "typeDesc": "FACTURA ELECTRONICA",
+        "siiDocumentPath": sii_document_path,
+        "society": "1700",
+        "account": account,
+        "documentDate": document_date,
+        "realDate": document_date,
+        "receiver": None,
+        "relatedElements": related_elements,
+        "totalDetail": {
+            "exemptSubtotal": 0,
+            "taxableSubTotal": service_charges_total,
+            "discount": 0,
+            "taxRate": tax_rate,
+            "cashAdjustment": 0,
+            "tax": tax_amount,
+            "total": total,
+            "totalToPay": total,
+        },
+        "details": [
+            {
+                "net": 0,
+                "quantity": 1,
+                "total": 0,
+                "gloss": f"TRANSPORTE DE CARGA CTA CTE: {account}",
+            },
+            {
+                "net": service_charges_total,
+                "quantity": 1,
+                "total": service_charges_total,
+                "gloss": "VALOR FLETE",
+            },
+        ],
+        "isLegacy": True,
+    }
     """
     Construye el documento para insertar en la colección invoices.
 

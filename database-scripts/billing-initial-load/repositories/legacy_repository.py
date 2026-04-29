@@ -36,17 +36,17 @@ def _to_iso_str(value) -> str | None:
 
 def batch_find_dcbt(cursor, reference_orders: list) -> dict:
     """
-    Consulta DCBT_NMR_FAC_PF para un lote de EEVV_NMR_ID.
+    Consulta DCBT_NMR_FAC_PF y DCBT_NMR_FAC_REAL para un lote de EEVV_NMR_ID.
 
     Máx. 1000 items por llamada (límite Oracle IN clause).
-    Retorna: {eevv_nmr_id: dcbt_nmr_fac_pf} (ambos como str).
+    Retorna: {eevv_nmr_id: {"dcbt_nmr_fac_pf": str, "dcbt_nmr_fac_real": str|None}}.
     """
     if not reference_orders:
         return {}
 
     placeholders = ", ".join([f":{i + 1}" for i in range(len(reference_orders))])
     sql = (
-        f"SELECT EEVV_NMR_ID, DCBT_NMR_FAC_PF "
+        f"SELECT EEVV_NMR_ID, DCBT_NMR_FAC_PF, DCBT_NMR_FAC_REAL "
         f"FROM DCBT "
         f"WHERE EEVV_NMR_ID IN ({placeholders})"
     )
@@ -57,7 +57,10 @@ def batch_find_dcbt(cursor, reference_orders: list) -> dict:
         eevv_id = str(row[0]) if row[0] is not None else None
         dcbt_nmr = str(row[1]) if row[1] is not None else None
         if eevv_id and dcbt_nmr:
-            result[eevv_id] = dcbt_nmr
+            result[eevv_id] = {
+                "dcbt_nmr_fac_pf": dcbt_nmr,
+                "dcbt_nmr_fac_real": str(row[2]) if row[2] is not None else None,
+            }
     return result
 
 
@@ -93,27 +96,6 @@ def batch_find_oser(cursor, reference_orders: list) -> dict:
     return result
 
 
-def batch_find_dcbt_distinct(cursor, reference_orders: list) -> list:
-    """
-    Retorna la lista de DCBT_NMR_FAC_PF distintos para un lote de EEVV_NMR_ID.
-
-    Máx. 1000 items por llamada (límite Oracle IN clause).
-    Retorna: list[str] con los números de factura únicos del lote.
-    """
-    if not reference_orders:
-        return []
-
-    placeholders = ", ".join([f":{i + 1}" for i in range(len(reference_orders))])
-    sql = (
-        f"SELECT DISTINCT(DCBT_NMR_FAC_PF) "
-        f"FROM DCBT "
-        f"WHERE EEVV_NMR_ID IN ({placeholders})"
-    )
-    query_logger.log_oracle(sql, reference_orders)
-    cursor.execute(sql, reference_orders)
-    return [str(row[0]) for row in cursor.fetchall() if row[0] is not None]
-
-
 def batch_find_proforma_data_bulk(cursor, facturas: list) -> dict:
     """
     Consulta los datos de proforma para un lote de DCBT_NMR_FAC_PF.
@@ -139,7 +121,8 @@ def batch_find_proforma_data_bulk(cursor, facturas: list) -> dict:
             SUM(OSER.OSER_VLOR_SEGURO)                                 AS garantia_extendida,
             SUM(OSER.OSER_VLOR_GASTO_CARRIER_PP)                       AS reintentos,
             MIN(DCBT_FCH_CREACION)                                     AS created_at,
-            MAX(DCBT_FCH_ULD_MOD)                                      AS updated_at
+            MAX(DCBT_FCH_ULD_MOD)                                      AS updated_at,
+            MAX(DCBT_NMR_FAC_REAL)                                     AS dcbt_nmr_fac_real
         FROM DCBT
         INNER JOIN OSER ON OSER.EEVV_NMR_ID = DCBT.EEVV_NMR_ID
         INNER JOIN CLHL ON OSER.CLHL_CDG_EMBA = CLHL.CLHL_CDG
@@ -163,6 +146,7 @@ def batch_find_proforma_data_bulk(cursor, facturas: list) -> dict:
                 "reintentos": _to_int(row[7]),
                 "created_at": _to_iso_str(row[8]),
                 "updated_at": _to_iso_str(row[9]),
+                "dcbt_nmr_fac_real": str(row[10]) if row[10] is not None else None,
             }
     return result
 
@@ -243,3 +227,38 @@ def find_proforma_data(cursor, dcbt_nmr_fac_pf: str) -> dict | None:
         "created_at": _to_iso_str(row[7]),
         "updated_at": _to_iso_str(row[8]),
     }
+
+
+def batch_find_invoice_data(cursor, dcbt_nmr_fac_reals: list) -> dict:
+    """
+    Consulta siiFolio (OAPV_VALOR) y siiDocumentPath (DEMV_RUTA_WEB) para
+    un lote de DCBT_NMR_FAC_REAL.
+
+    La tabla OAPV almacena atributos clave-valor por OS; el código 'FOLIO_SII'
+    corresponde al folio SII de la factura. DEMV contiene la ruta del documento.
+
+    Máx. 1000 items por llamada (límite Oracle IN clause).
+    Retorna: {dcbt_nmr_fac_real: {"sii_folio": str, "sii_document_path": str|None}}
+    """
+    if not dcbt_nmr_fac_reals:
+        return {}
+
+    placeholders = ", ".join([f":{i + 1}" for i in range(len(dcbt_nmr_fac_reals))])
+    sql = (
+        f"SELECT OAPV.EEVV_NMR_ID, OAPV_VALOR, DEMV_RUTA_WEB "
+        f"FROM OAPV "
+        f"JOIN DEMV ON OAPV.EEVV_NMR_ID = DEMV.EEVV_NMR_ID "
+        f"WHERE OAPV.EEVV_NMR_ID IN ({placeholders}) "
+        f"AND OAPV.OAPC_CDG = 'FOLIO_SII'"
+    )
+    query_logger.log_oracle(sql, dcbt_nmr_fac_reals)
+    cursor.execute(sql, dcbt_nmr_fac_reals)
+    result = {}
+    for row in cursor.fetchall():
+        eevv_id = str(row[0]) if row[0] is not None else None
+        if eevv_id:
+            result[eevv_id] = {
+                "sii_folio": str(row[1]) if row[1] is not None else None,
+                "sii_document_path": str(row[2]) if row[2] is not None else None,
+            }
+    return result
