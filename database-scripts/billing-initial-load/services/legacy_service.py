@@ -363,11 +363,14 @@ def process_batch(batch: list, mongo_db, oracle_conn, dry_run: bool) -> list:
             extra_updates.append({"orderId": order_id, "billing": billing_doc})
 
     # ── Paso 9: escrituras masivas en MongoDB ─────────────────────────────────
+    write_stats = {"orders_matched": 0, "orders_modified": 0}
     if not dry_run:
         all_updates = billing_updates + extra_updates
         if all_updates:
-            order_repository.bulk_write_billing(orders_col, all_updates)
+            mongo_result = order_repository.bulk_write_billing(orders_col, all_updates)
+            write_stats["orders_matched"] = mongo_result["matched"]
+            write_stats["orders_modified"] = mongo_result["modified"]
         if invoices_to_create:
             invoice_repository.save_many(invoices_col, invoices_to_create)
 
-    return results
+    return results, write_stats

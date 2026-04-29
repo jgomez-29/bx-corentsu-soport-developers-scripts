@@ -104,9 +104,11 @@ def _print_final_summary(stats: dict, elapsed: float):
     print("=" * 65)
     print("=== RESUMEN FINAL [legacy] ===")
     print(f"  Días procesados          : {stats['days']}")
-    print(f"  OS candidatas            : {stats['total_candidates']}")
+    print(f"  OS candidatas (cursor)   : {stats['total_candidates']}")
     print(f"  Actualizadas (c/proforma): {stats['updated']}")
     print(f"  Actualizadas (s/proforma): {stats['updated_no_proforma']}")
+    if not config.DRY_RUN:
+        print(f"  Actualizadas en MongoDB  : {stats['orders_modified']}  ← total real (incluye OS extra de la factura)")
     print(f"  Skipped (ya BILLED)      : {stats['skipped_already_billed']}")
     print(f"  Errores                  : {stats['errors']}")
     print(f"  Proformas creadas        : {stats['proformas_created']}")
@@ -137,6 +139,7 @@ def _save_log(stats: dict, all_results: list, elapsed: float):
             "total_candidates": stats["total_candidates"],
             "updated": stats["updated"],
             "updated_no_proforma": stats["updated_no_proforma"],
+            "orders_modified_in_mongo": stats["orders_modified"],
             "skipped_already_billed": stats["skipped_already_billed"],
             "errors": stats["errors"],
             "proformas_created": stats["proformas_created"],
@@ -201,6 +204,7 @@ def run():
         "skipped_already_billed": 0,
         "errors": 0,
         "proformas_created": 0,
+        "orders_modified": 0,
     }
     all_results = []
     start_time = time.monotonic()
@@ -259,7 +263,7 @@ def run():
                         if len(batch) >= config.BATCH_SIZE:
                             batch_num += 1
                             try:
-                                batch_results = legacy_service.process_batch(
+                                batch_results, write_stats = legacy_service.process_batch(
                                     batch, mongo_db, oracle_conn, config.DRY_RUN
                                 )
                             except Exception as e:
@@ -276,11 +280,12 @@ def run():
                                 continue
 
                             _accumulate(stats, batch_results)
+                            stats["orders_modified"] += write_stats["orders_modified"]
                             all_results.extend(batch_results)
-                            day_updated += sum(
-                                1 for r in batch_results
-                                if r["status"] in ("UPDATED", "UPDATED_WITHOUT_PROFORMA", "DRY_RUN")
-                            )
+                            if config.DRY_RUN:
+                                day_updated += sum(1 for r in batch_results if r["status"] == "DRY_RUN")
+                            else:
+                                day_updated += write_stats["orders_modified"]
                             day_errors += sum(1 for r in batch_results if r["status"] == "ERROR")
                             batch_proformas = sum(1 for r in batch_results if r.get("proforma_action") == "CREATED")
 
@@ -300,7 +305,7 @@ def run():
                 if batch:
                     batch_num += 1
                     try:
-                        batch_results = legacy_service.process_batch(
+                        batch_results, write_stats = legacy_service.process_batch(
                             batch, mongo_db, oracle_conn, config.DRY_RUN
                         )
                     except Exception as e:
@@ -314,14 +319,16 @@ def run():
                         stats["errors"] += len(batch)
                         day_errors += len(batch)
                         batch_results = []
+                        write_stats = {"orders_matched": 0, "orders_modified": 0}
 
                     if batch_results:
                         _accumulate(stats, batch_results)
+                        stats["orders_modified"] += write_stats["orders_modified"]
                         all_results.extend(batch_results)
-                        day_updated += sum(
-                            1 for r in batch_results
-                            if r["status"] in ("UPDATED", "UPDATED_WITHOUT_PROFORMA", "DRY_RUN")
-                        )
+                        if config.DRY_RUN:
+                            day_updated += sum(1 for r in batch_results if r["status"] == "DRY_RUN")
+                        else:
+                            day_updated += write_stats["orders_modified"]
 
                 day_progress_pct = day_processed / day_total * 100 if day_total > 0 else 0
                 limit_note = f" (límite DRY_RUN {config.DRY_RUN_LIMIT})" if day_limit_reached else ""
